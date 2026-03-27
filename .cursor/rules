@@ -1,0 +1,82 @@
+# SISTEMA DE CHAMADOS INTERNOS — Cursor Rules
+# Baseado no PRD v1.0 aprovado | Projecont Consultoria Contábil
+
+## STACK
+- Next.js 14 App Router + TypeScript (strict)
+- PostgreSQL + Prisma ORM
+- NextAuth v5 (Auth.js) com credentials provider
+- Tailwind CSS v4 + shadcn/ui
+- Self-hosted (sem Vercel, sem edge runtime)
+- tRPC NÃO FAZ PARTE DA STACK — não criar pastas ou rotas relacionadas a tRPC
+
+## ESTRUTURA — ONDE CADA COISA VAI
+- Lógica de negócio → src/server/actions/ (Server Actions)
+- Consultas ao banco → src/server/queries/
+- Singleton Prisma → src/lib/prisma.ts (nunca instanciar direto)
+- Cálculo de datas → src/lib/sla.ts (nunca Date aritmético direto)
+- Componentes de domínio → src/components/chamados/
+- Componentes shadcn → src/components/ui/ (nunca editar)
+- Job de auto-fechamento → src/jobs/autoFechar.ts (lógica isolada)
+
+## REGRAS DE NEGÓCIO INVIOLÁVEIS
+1. Chamado nunca fecha sem passar por AGUARDANDO_VALIDACAO
+   (exceto CANCELADO por Gestor/SUPERADMIN)
+2. Toda mudança de status DEVE gerar um HistoricoStatus
+3. Toda mudança de status crítica DEVE gerar Notificacao
+4. Reprovação SEMPRE exige justificativa — campo obrigatório
+5. VinculoEmpresa define o responsável — nunca deixar NULL
+   em chamados para setores Contábil/Fiscal/DP
+6. Chamados para setor IA: responsável NULL até ser assumido
+7. LogPersona DEVE ser criado sempre que emNomeDeCliente=true
+8. Prazo SLA DEVE ser calculado com adicionarDiasUteis() de lib/sla.ts
+9. TRANSFERIR: GESTOR (mesmo setor) ou SUPERADMIN (qualquer setor)
+10. CANCELAR: apenas GESTOR ou SUPERADMIN, em qualquer status
+11. PERSONA DE CLIENTE: emNomeDeCliente=true — apenas GESTOR ou SUPERADMIN
+12. CRIAR PROJETO IA: ANALISTA/GESTOR do setor IA ou SUPERADMIN
+
+## AUTENTICAÇÃO E SEGURANÇA
+- Toda Server Action começa com: const session = await auth()
+  seguido de verificação de role antes de qualquer operação
+- Nunca confiar em dados do cliente para autorização
+- Sessão TV é read-only — nunca permitir mutações
+- Erros de Server Action retornam { error: string } nunca throw direto ao client
+
+## DESIGN SYSTEM — IDENTIDADE VISUAL PROJECONT
+- brand-navy: #001F3E (sidebar, navbar, login bg)
+- brand-cyan: #1AB6D9 (botões primários, item ativo, destaque)
+- brand-blue: #2082BE (botões secundários, hover)
+- brand-slate: #64789B (texto secundário, ícones inativos)
+- brand-charcoal: #3E3E3D (texto principal)
+- brand-ice: #DCE2EB (fundos sutis, tabelas)
+- Sidebar: fundo brand-navy, item ativo barra lateral brand-cyan
+- Botão primário: bg-brand-cyan text-white hover:bg-brand-blue
+- NUNCA usar outras paletas ou bibliotecas de ícones além de lucide-react
+
+## BADGES DE STATUS (cores fixas)
+- ABERTO: bg-blue-100 text-blue-700
+- EM_ANDAMENTO: bg-yellow-100 text-yellow-800
+- AGUARDANDO_VALIDACAO: bg-purple-100 text-purple-800
+- CONCLUIDO: bg-green-100 text-green-800
+- CANCELADO: bg-zinc-100 text-zinc-500
+- Prioridade CRITICA: bg-red-100 text-red-800
+
+## PADRÕES DE CÓDIGO
+- Sempre TypeScript strict — sem any, sem type assertions desnecessários
+- Queries Prisma sempre via src/lib/prisma.ts singleton
+- Componentes server por padrão, 'use client' apenas quando necessário
+- Nomes em português para entidades de domínio (Chamado, Setor, Empresa)
+- Nomes em inglês para padrões técnicos (handler, props, hook, util)
+- Formulários: React Hook Form + Zod para validação
+
+## BANCO DE DADOS
+- Nunca rodar queries diretas — sempre via Prisma
+- Schema é fonte da verdade — não alterar banco manualmente
+
+## FORA DO ESCOPO — NÃO IMPLEMENTAR
+- Integração com ERP ou sistemas externos
+- Notificação por WhatsApp
+- Acesso de clientes externos ao sistema
+- App mobile
+- Controle de carga de trabalho por analista
+- Gestão de demandas internas de um mesmo setor
+- tRPC ou qualquer camada de RPC adicional

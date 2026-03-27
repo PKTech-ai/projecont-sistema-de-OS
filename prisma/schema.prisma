@@ -1,13 +1,212 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ANALISTA
+  GESTOR
+  SUPERADMIN
+  TV
+}
+
+enum StatusChamado {
+  ABERTO
+  EM_ANDAMENTO
+  AGUARDANDO_VALIDACAO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum Prioridade {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+// GLPI-inspired: tipo de chamado
+enum TipoChamado {
+  INCIDENTE    // algo parou de funcionar / está errado
+  SOLICITACAO  // pedido de serviço / demanda nova
+}
+
+// GLPI-inspired: urgência e impacto geram prioridade automaticamente
+enum Urgencia {
+  MUITO_BAIXA
+  BAIXA
+  MEDIA
+  ALTA
+  MUITO_ALTA
+}
+
+enum Impacto {
+  MUITO_BAIXO
+  BAIXO
+  MEDIO
+  ALTO
+  MUITO_ALTO
+}
+
+enum TipoSetor {
+  CONTABIL
+  FISCAL
+  DP
+  IA
+  CLIENTES
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  role      Role     @default(ANALISTA)
+  ativo     Boolean  @default(true)
+  setorId   String
+  setor     Setor    @relation(fields: [setorId], references: [id])
+  criadoEm  DateTime @default(now())
+
+  chamadosAbertos     Chamado[]       @relation("Solicitante")
+  chamadosResponsavel Chamado[]       @relation("Responsavel")
+  comentarios         Comentario[]
+  notificacoes        Notificacao[]
+  logPersonas         LogPersona[]
+  historicoStatus     HistoricoStatus[]
+  vinculos            VinculoEmpresa[]
+}
+
+model Setor {
+  id        String    @id @default(cuid())
+  nome      String
+  tipo      TipoSetor @unique
+  usuarios  Usuario[]
+  projetos  Projeto[]
+  chamados  Chamado[]
+}
+
+model Empresa {
+  id        String           @id @default(cuid())
+  nome      String
+  ativo     Boolean          @default(true)
+  criadoEm  DateTime         @default(now())
+  vinculos  VinculoEmpresa[]
+  chamados  Chamado[]
+  logPersonas LogPersona[]
+}
+
+model VinculoEmpresa {
+  id            String  @id @default(cuid())
+  empresaId     String
+  empresa       Empresa @relation(fields: [empresaId], references: [id])
+  tipoServico   String
+  responsavelId String
+  responsavel   Usuario @relation(fields: [responsavelId], references: [id])
+
+  @@unique([empresaId, tipoServico])
+}
+
+model Projeto {
+  id        String   @id @default(cuid())
+  nome      String
+  descricao String?
+  ativo     Boolean  @default(true)
+  setorId   String
+  setor     Setor    @relation(fields: [setorId], references: [id])
+  criadoEm  DateTime @default(now())
+  chamados  Chamado[]
+}
+
+model Chamado {
+  id              String        @id @default(cuid())
+  titulo          String
+  descricao       String
+  status          StatusChamado @default(ABERTO)
+  prioridade      Prioridade    @default(MEDIA)
+  autoFechado     Boolean       @default(false)
+  emNomeDeCliente Boolean       @default(false)
+
+  // GLPI-inspired fields
+  tipo            TipoChamado   @default(SOLICITACAO)
+  urgencia        Urgencia      @default(MEDIA)
+  impacto         Impacto       @default(MEDIO)
+  solucao         String?       // preenchido pelo analista ao entregar
+
+  // Setor de destino — para roteamento e regras de UI
+  setorDestinoId  String?
+  setorDestino    Setor?        @relation(fields: [setorDestinoId], references: [id])
+
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  prazoSla     DateTime?
+  entregueEm   DateTime?
+  concluidoEm  DateTime?
+
+  solicitanteId String
+  solicitante   Usuario  @relation("Solicitante", fields: [solicitanteId], references: [id])
+  responsavelId String?
+  responsavel   Usuario? @relation("Responsavel", fields: [responsavelId], references: [id])
+
+  empresaId String?
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+  projetoId String?
+  projeto   Projeto? @relation(fields: [projetoId], references: [id])
+
+  comentarios     Comentario[]
+  notificacoes    Notificacao[]
+  historicoStatus HistoricoStatus[]
+  logPersonas     LogPersona[]
+
+  @@index([status])
+  @@index([responsavelId])
+  @@index([solicitanteId])
+  @@index([empresaId])
+}
+
+model Comentario {
+  id        String   @id @default(cuid())
+  conteudo  String
+  criadoEm  DateTime @default(now())
+  chamadoId String
+  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
+  autorId   String
+  autor     Usuario  @relation(fields: [autorId], references: [id])
+}
+
+model Notificacao {
+  id        String   @id @default(cuid())
+  tipo      String
+  lida      Boolean  @default(false)
+  criadoEm  DateTime @default(now())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  chamadoId String
+  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
+}
+
+model HistoricoStatus {
+  id            String        @id @default(cuid())
+  statusAntes   StatusChamado
+  statusDepois  StatusChamado
+  justificativa String?
+  criadoEm      DateTime      @default(now())
+  chamadoId     String
+  chamado       Chamado       @relation(fields: [chamadoId], references: [id])
+  atorId        String
+  ator          Usuario       @relation(fields: [atorId], references: [id])
+}
+
+model LogPersona {
+  id        String   @id @default(cuid())
+  criadoEm  DateTime @default(now())
+  atorId    String
+  ator      Usuario  @relation(fields: [atorId], references: [id])
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  chamadoId String
+  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
 }
