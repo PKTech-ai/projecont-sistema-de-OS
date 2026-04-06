@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 import { StatusChamado } from "@prisma/client";
+import type { FiltrosListaChamados } from "@/lib/filtros-chamados";
+import { mergeFiltrosLista } from "@/server/queries/chamado-lista-filtros";
 
 export async function getChamados({
   userId,
@@ -21,13 +23,14 @@ export async function getChamados({
 
   if (statusFilter) where.status = statusFilter;
 
-  if (role === "ANALISTA") {
+  if (role === "ANALISTA" || role === "SAC") {
     where.OR = [{ solicitanteId: userId }, { responsavelId: userId }];
   } else if (role === "GESTOR") {
-    // Gestor vê todos os chamados do setor (como solicitante ou responsável)
+    // Fila do setor (destino) + chamados em que o gestor é parte
     where.OR = [
-      { solicitante: { setorId } },
-      { responsavel: { setorId } },
+      { setorDestinoId: setorId },
+      { solicitanteId: userId },
+      { responsavelId: userId },
     ];
   }
   // SUPERADMIN vê tudo — sem filtro adicional
@@ -68,24 +71,27 @@ export async function getChamadoById(id: string) {
         include: { ator: { select: { id: true, nome: true, role: true } } },
         orderBy: { criadoEm: "asc" },
       },
+      anexos: {
+        include: { autor: { select: { id: true, nome: true, role: true } } },
+        orderBy: { criadoEm: "asc" },
+      },
       notificacoes: true,
     },
   });
-  // #region agent log
-  fetch('http://127.0.0.1:7448/ingest/adf8baf6-2bfb-4ba5-b401-76fc30788b1a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'197317'},body:JSON.stringify({sessionId:'197317',location:'queries/chamados.ts:getChamadoById',message:'chamado fields',data:{id:result?.id,urgencia:result?.urgencia,impacto:result?.impacto,tipo:result?.tipo,solucao:result?.solucao},timestamp:Date.now(),hypothesisId:'H-A'})}).catch(()=>{});
-  // #endregion
   return result;
 }
 
-export async function getChamadosSetor(setorId: string) {
+const filtroPadraoLista: FiltrosListaChamados = {
+  status: "TODOS",
+  prioridade: "TODOS",
+  prazo: "TODOS",
+};
+
+export async function getChamadosSetor(setorId: string, filtros?: FiltrosListaChamados) {
+  const base = { setorDestinoId: setorId };
+  const where = mergeFiltrosLista(base, filtros ?? filtroPadraoLista);
   return prisma.chamado.findMany({
-    where: {
-      status: { notIn: [StatusChamado.CONCLUIDO, StatusChamado.CANCELADO] },
-      OR: [
-        { solicitante: { setorId } },
-        { responsavel: { setorId } },
-      ],
-    },
+    where,
     include: {
       solicitante: { select: { nome: true } },
       responsavel: { select: { nome: true } },
@@ -93,5 +99,6 @@ export async function getChamadosSetor(setorId: string) {
       projeto: { select: { nome: true } },
     },
     orderBy: [{ prioridade: "desc" }, { criadoEm: "desc" }],
+    take: 25,
   });
 }

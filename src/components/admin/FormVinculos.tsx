@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { upsertVinculo, removerVinculo } from "@/server/actions/empresas";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DsDialogHeader, DsDialogBody, DsFormAlert, dsDialogContentClass } from "@/components/ui/ds-dialog";
+import { cn } from "@/lib/utils";
 import { Link2, Trash2, Plus } from "lucide-react";
 
 const SETORES_SERVICO = [
@@ -12,6 +14,7 @@ const SETORES_SERVICO = [
   { valor: "DP", label: "Depto. Pessoal" },
   { valor: "IA", label: "IA" },
   { valor: "CLIENTES", label: "Clientes" },
+  { valor: "SOCIETARIO", label: "Societário" },
 ];
 
 interface Vinculo {
@@ -85,38 +88,36 @@ export function FormVinculos({ empresa, vinculos, analistas }: Props) {
 
   const setorLabel = (tipo: string) => SETORES_SERVICO.find((s) => s.valor === tipo)?.label ?? tipo;
 
-  const selectCls = "w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm text-[#3E3E3D] focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40";
+  const selectCls = "w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-info/40";
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="border-[#DCE2EB] text-[#64789B] text-xs">
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="border-ds-pebble text-ds-ash text-xs">
         <Link2 className="h-3 w-3 mr-1" />
         Vínculos
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[#001F3E]">Vínculos — {empresa.nome}</DialogTitle>
-          </DialogHeader>
-
-          <p className="text-xs text-[#64789B] -mt-1">
-            Defina qual colaborador é responsável por esta empresa em cada setor de serviço.
-          </p>
+        <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
+          <DsDialogHeader
+            icon={Link2}
+            title={`Vínculos — ${empresa.nome}`}
+            description="Defina qual colaborador é responsável por esta empresa em cada tipo de serviço."
+          />
 
           {/* Lista de vínculos */}
-          <div className="space-y-2 mt-1">
+          <DsDialogBody className="space-y-2 pt-0">
             {lista.length === 0 ? (
-              <p className="text-sm text-[#8E8E8D] italic text-center py-3">Nenhum vínculo definido</p>
+              <p className="text-sm text-brand-gray-mid italic text-center py-3">Nenhum vínculo definido</p>
             ) : (
               lista.map((v) => (
                 <div
                   key={v.id}
-                  className="flex items-center justify-between bg-[#F8FAFC] border border-[#DCE2EB] rounded-lg px-3 py-2"
+                  className="flex items-center justify-between bg-ds-paper border border-ds-pebble rounded-lg px-3 py-2"
                 >
                   <div>
-                    <span className="text-xs font-semibold text-[#001F3E] uppercase">{setorLabel(v.tipoServico)}</span>
-                    <span className="text-xs text-[#64789B] ml-2">→ {v.responsavel.nome}</span>
+                    <span className="text-xs font-semibold text-ds-ink uppercase">{setorLabel(v.tipoServico)}</span>
+                    <span className="text-xs text-ds-ash ml-2">→ {v.responsavel.nome}</span>
                   </div>
                   <button
                     onClick={() => remover(v.tipoServico)}
@@ -128,15 +129,14 @@ export function FormVinculos({ empresa, vinculos, analistas }: Props) {
                 </div>
               ))
             )}
-          </div>
+          </DsDialogBody>
 
-          {/* Adicionar vínculo */}
-          <div className="border-t border-[#DCE2EB] pt-4 space-y-3">
-            <p className="text-xs font-medium text-[#001F3E]">Adicionar / Atualizar vínculo</p>
+          <div className="border-t border-ds-pebble bg-ds-paper/40 px-6 py-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ds-ash">Adicionar ou atualizar</p>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs text-[#64789B] mb-1">Setor de serviço</label>
+                <label className="mb-1 block text-xs font-medium text-ds-charcoal">Setor de serviço</label>
                 <select value={novoSetor} onChange={(e) => { setNovoSetor(e.target.value); setNovoResponsavel(""); }} className={selectCls}>
                   <option value="">Selecione...</option>
                   {SETORES_SERVICO.map((s) => (
@@ -147,7 +147,7 @@ export function FormVinculos({ empresa, vinculos, analistas }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#64789B] mb-1">
+                <label className="mb-1 block text-xs font-medium text-ds-charcoal">
                   Responsável{novoSetor ? ` (${setorLabel(novoSetor)})` : ""}
                 </label>
                 <select value={novoResponsavel} onChange={(e) => setNovoResponsavel(e.target.value)} disabled={!novoSetor} className={selectCls}>
@@ -159,13 +159,13 @@ export function FormVinculos({ empresa, vinculos, analistas }: Props) {
               </div>
             </div>
 
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error ? <DsFormAlert>{error}</DsFormAlert> : null}
 
             <Button
               onClick={adicionar}
               disabled={loading || !novoSetor || !novoResponsavel}
               size="sm"
-              className="w-full bg-[#001F3E] hover:bg-[#002a54] text-white"
+              className="w-full bg-ds-ink hover:bg-ds-ink-dark text-ds-paper"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
               {setoresVinculados.includes(novoSetor) && novoSetor ? "Atualizar responsável" : "Adicionar vínculo"}

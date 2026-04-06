@@ -14,7 +14,7 @@ const schema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
   email: z.string().email("Email inválido"),
   senha: z.string().min(6, "Mínimo 6 caracteres"),
-  role: z.enum(["ANALISTA", "GESTOR", "SUPERADMIN", "TV"]),
+  role: z.enum(["ANALISTA", "GESTOR", "SAC", "SUPERADMIN", "TV"]),
   setorId: z.string().min(1, "Selecione um setor"),
 });
 
@@ -41,13 +41,13 @@ export function FormNovoUsuario({ setores }: Props) {
     setOpen(false);
   }
 
-  const inputCls = "w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm text-[#3E3E3D] focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40 focus:border-[#1AB6D9]";
-  const labelCls = "block text-xs font-medium text-[#64789B] mb-1";
+  const inputCls = "w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-info/40 focus:border-ds-info";
+  const labelCls = "block text-xs font-medium text-ds-ash mb-1";
   const errorCls = "text-xs text-red-500 mt-0.5";
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+      <Button onClick={() => setOpen(true)} className="bg-ds-info hover:bg-ds-ink-dark text-white">
         <UserPlus className="h-4 w-4 mr-2" />
         Novo Usuário
       </Button>
@@ -55,7 +55,7 @@ export function FormNovoUsuario({ setores }: Props) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#001F3E]">Criar Novo Usuário</DialogTitle>
+            <DialogTitle className="text-ds-ink">Criar Novo Usuário</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
@@ -83,6 +83,7 @@ export function FormNovoUsuario({ setores }: Props) {
                 <select {...register("role")} className={inputCls}>
                   <option value="ANALISTA">Analista</option>
                   <option value="GESTOR">Gestor</option>
+                  <option value="SAC">SAC (atendimento ao cliente)</option>
                   <option value="SUPERADMIN">Super Admin</option>
                   <option value="TV">TV (Display)</option>
                 </select>
@@ -112,11 +113,11 @@ export function FormNovoUsuario({ setores }: Props) {
                 type="button"
                 variant="outline"
                 onClick={() => { reset(); setOpen(false); }}
-                className="border-[#DCE2EB] text-[#64789B]"
+                className="border-ds-pebble text-ds-ash"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+              <Button type="submit" disabled={isSubmitting} className="bg-ds-info hover:bg-ds-ink-dark text-white">
                 {isSubmitting ? "Criando..." : "Criar Usuário"}
               </Button>
             </div>

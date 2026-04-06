@@ -1,13 +1,18 @@
 "use client";
 
-import { diasUteisEntre } from "@/lib/sla";
+import {
+  minutosUteisEntre,
+  formatMinutosUteisLegivel,
+} from "@/lib/sla";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 
 interface SlaIndicatorProps {
   prazoSla: Date | null | undefined;
   status: string;
 }
+
+const UMA_JORNADA_MIN = 8 * 60;
 
 export function SlaIndicator({ prazoSla, status }: SlaIndicatorProps) {
   if (!prazoSla) return null;
@@ -15,32 +20,38 @@ export function SlaIndicator({ prazoSla, status }: SlaIndicatorProps) {
 
   const now = new Date();
   const prazo = new Date(prazoSla);
-  const diasRestantes = diasUteisEntre(now, prazo);
   const vencido = prazo < now;
-  const urgente = !vencido && diasRestantes <= 1;
+  const minRestantes = minutosUteisEntre(now, prazo);
+  const urgente = !vencido && minRestantes <= UMA_JORNADA_MIN;
 
   if (vencido) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-ds-danger-fg bg-ds-danger-bg border border-ds-danger/25 px-2 py-0.5 rounded-full">
         <AlertTriangle className="h-3 w-3" />
-        SLA Vencido
+        Fora do prazo
       </span>
     );
   }
 
+  const texto = formatMinutosUteisLegivel(minRestantes);
+
   if (urgente) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 text-xs font-medium text-ds-warning-fg bg-ds-warning-bg border border-ds-warning/30 px-2 py-0.5 rounded-full"
+        )}
+      >
         <Clock className="h-3 w-3" />
-        {diasRestantes}d útil
+        {texto} restantes
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#64789B] bg-[#DCE2EB] px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-ds-charcoal bg-ds-linen border border-ds-pebble px-2 py-0.5 rounded-full">
       <Clock className="h-3 w-3" />
-      {diasRestantes}d úteis
+      {texto} restantes
     </span>
   );
 }

@@ -2,22 +2,24 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { adicionarDiasUteis } from "@/lib/sla";
+import { adicionarHorasUteis } from "@/lib/sla";
+import { PRAZO_HORAS_UTEIS_POR_PRIORIDADE } from "@/lib/prioridade";
+import { dentroDoPrazo } from "@/lib/pontualidade";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { StatusChamado, Prioridade, TipoSetor, TipoChamado, Urgencia, Impacto } from "@prisma/client";
+import {
+  StatusChamado,
+  Prioridade,
+  TipoSetor,
+  TipoChamado,
+  TipoMensagemChat,
+  type Role,
+} from "@prisma/client";
 import type { ActionResult } from "@/types";
-
-const SLA_DIAS_POR_PRIORIDADE: Record<Prioridade, number> = {
-  CRITICA: 1,
-  ALTA: 3,
-  MEDIA: 5,
-  BAIXA: 10,
-};
 
 // Transições válidas na máquina de estados
 const TRANSICOES_VALIDAS: Partial<Record<StatusChamado, StatusChamado[]>> = {
-  ABERTO: [StatusChamado.EM_ANDAMENTO, StatusChamado.CANCELADO],
+  NAO_INICIADO: [StatusChamado.EM_ANDAMENTO, StatusChamado.CANCELADO],
   EM_ANDAMENTO: [StatusChamado.AGUARDANDO_VALIDACAO, StatusChamado.CANCELADO],
   AGUARDANDO_VALIDACAO: [
     StatusChamado.CONCLUIDO,
@@ -30,11 +32,8 @@ const criarChamadoSchema = z.object({
   titulo: z.string().min(5, "Título deve ter no mínimo 5 caracteres"),
   descricao: z.string().min(10, "Descrição deve ter no mínimo 10 caracteres"),
   prioridade: z.nativeEnum(Prioridade),
-  tipo: z.nativeEnum(TipoChamado).default(TipoChamado.SOLICITACAO),
-  urgencia: z.nativeEnum(Urgencia).default(Urgencia.MEDIA),
-  impacto: z.nativeEnum(Impacto).default(Impacto.MEDIO),
   setorDestinoId: z.string(),
-  empresaId: z.string().optional().nullable(),
+  empresaId: z.string().min(1, "Selecione a empresa"),
   projetoId: z.string().optional().nullable(),
   emNomeDeCliente: z.boolean().default(false),
   empresaClienteId: z.string().optional().nullable(),
@@ -48,61 +47,58 @@ export async function criarChamado(
   if (session.user.role === "TV") return { error: "Não autorizado" };
 
   if (input.emNomeDeCliente) {
-    if (session.user.role !== "GESTOR" && session.user.role !== "SUPERADMIN") {
-      return { error: "Apenas GESTOR ou SUPERADMIN podem abrir chamados em nome de cliente" };
+    if (session.user.role !== "SAC" && session.user.role !== "SUPERADMIN") {
+      return { error: "Chamados em nome de cliente só podem ser abertos pela área de atendimento (SAC)." };
     }
   }
 
   const parsed = criarChamadoSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
 
+  if (parsed.data.emNomeDeCliente && !parsed.data.empresaClienteId) {
+    return { error: "Selecione a empresa do cliente." };
+  }
+
   const setorDestino = await prisma.setor.findUnique({
     where: { id: parsed.data.setorDestinoId },
   });
   if (!setorDestino) return { error: "Setor de destino não encontrado" };
 
-  let responsavelId: string | null = null;
-
-  // Roteamento automático: se empresa + setor tiverem vínculo, atribui responsável
-  if (parsed.data.empresaId) {
-    const vinculo = await prisma.vinculoEmpresa.findUnique({
-      where: {
-        empresaId_tipoServico: {
-          empresaId: parsed.data.empresaId,
-          // tipoServico é armazenado em uppercase (igual ao enum TipoSetor)
-          tipoServico: setorDestino.tipo,
-        },
+  const vinculo = await prisma.vinculoEmpresa.findUnique({
+    where: {
+      empresaId_tipoServico: {
+        empresaId: parsed.data.empresaId,
+        tipoServico: setorDestino.tipo,
       },
-    });
-    if (vinculo) {
-      responsavelId = vinculo.responsavelId;
-    }
-    // Se não houver vínculo, o chamado fica sem responsável (ABERTO, a ser triado pelo gestor)
+    },
+  });
+  if (!vinculo) {
+    return {
+      error: `Não há responsável cadastrado para esta empresa no setor ${setorDestino.nome}. Cadastre o vínculo (empresa × tipo de serviço) antes de abrir o chamado.`,
+    };
   }
-  // Setor IA — responsável fica NULL até ser assumido via assumirChamadoIA
-  // Funcionários sem vínculo podem abrir chamados sem empresa
+  const responsavelId = vinculo.responsavelId;
 
-  const prazoSla = adicionarDiasUteis(new Date(), SLA_DIAS_POR_PRIORIDADE[parsed.data.prioridade]);
+  const horasPrazo = PRAZO_HORAS_UTEIS_POR_PRIORIDADE[parsed.data.prioridade];
+  const prazoSla = adicionarHorasUteis(new Date(), horasPrazo);
 
   const chamado = await prisma.chamado.create({
     data: {
       titulo: parsed.data.titulo,
       descricao: parsed.data.descricao,
       prioridade: parsed.data.prioridade,
-      tipo: parsed.data.tipo,
-      urgencia: parsed.data.urgencia,
-      impacto: parsed.data.impacto,
+      tipo: TipoChamado.SOLICITACAO,
       setorDestinoId: setorDestino.id,
       emNomeDeCliente: parsed.data.emNomeDeCliente,
       prazoSla,
       solicitanteId: session.user.id,
       responsavelId,
-      empresaId: parsed.data.empresaId || null,
+      empresaId: parsed.data.empresaId,
       projetoId: parsed.data.projetoId || null,
       historicoStatus: {
         create: {
-          statusAntes: StatusChamado.ABERTO,
-          statusDepois: StatusChamado.ABERTO,
+          statusAntes: StatusChamado.NAO_INICIADO,
+          statusDepois: StatusChamado.NAO_INICIADO,
           atorId: session.user.id,
           justificativa: "Chamado aberto",
         },
@@ -110,16 +106,13 @@ export async function criarChamado(
     },
   });
 
-  // Notificação para o responsável (se houver)
-  if (responsavelId) {
-    await prisma.notificacao.create({
-      data: {
-        tipo: "CHAMADO_ABERTO",
-        usuarioId: responsavelId,
-        chamadoId: chamado.id,
-      },
-    });
-  }
+  await prisma.notificacao.create({
+    data: {
+      tipo: "CHAMADO_ABERTO",
+      usuarioId: responsavelId,
+      chamadoId: chamado.id,
+    },
+  });
 
   // LogPersona se abriu em nome de cliente
   if (parsed.data.emNomeDeCliente && parsed.data.empresaClienteId) {
@@ -133,6 +126,7 @@ export async function criarChamado(
   }
 
   revalidatePath("/chamados");
+  revalidatePath("/sac/novo");
   return { success: true, data: { id: chamado.id } };
 }
 
@@ -160,12 +154,14 @@ export async function entregarChamado(
     return { error: "Apenas o responsável pode entregar o chamado" };
   }
 
+  const agora = new Date();
   await prisma.chamado.update({
     where: { id: parsed.data.chamadoId },
     data: {
       status: StatusChamado.AGUARDANDO_VALIDACAO,
       solucao: parsed.data.solucao,
-      entregueEm: new Date(),
+      entregueEm: agora,
+      entregaNoPrazo: dentroDoPrazo(agora, chamado.prazoSla),
     },
   });
 
@@ -222,10 +218,10 @@ export async function mudarStatus(
 
   // Verificação de quem pode fazer cada transição
   if (input.novoStatus === StatusChamado.CANCELADO) {
-    if (role !== "GESTOR" && role !== "SUPERADMIN") {
-      return { error: "Apenas GESTOR ou SUPERADMIN podem cancelar chamados" };
+    if (chamado.solicitanteId !== userId) {
+      return { error: "Apenas quem abriu o chamado pode cancelá-lo" };
     }
-  } else if (input.novoStatus === StatusChamado.EM_ANDAMENTO && chamado.status === StatusChamado.ABERTO) {
+  } else if (input.novoStatus === StatusChamado.EM_ANDAMENTO && chamado.status === StatusChamado.NAO_INICIADO) {
     if (chamado.responsavelId !== userId && role !== "SUPERADMIN") {
       return { error: "Apenas o responsável pode iniciar o atendimento" };
     }
@@ -234,12 +230,12 @@ export async function mudarStatus(
       return { error: "Apenas o responsável pode enviar para validação" };
     }
   } else if (input.novoStatus === StatusChamado.CONCLUIDO) {
-    if (chamado.solicitanteId !== userId && role !== "SUPERADMIN") {
+    if (chamado.solicitanteId !== userId) {
       return { error: "Apenas o solicitante pode concluir o chamado" };
     }
   } else if (input.novoStatus === StatusChamado.EM_ANDAMENTO && chamado.status === StatusChamado.AGUARDANDO_VALIDACAO) {
-    // Reprovação
-    if (chamado.solicitanteId !== userId && role !== "SUPERADMIN") {
+    // Reprovação — somente o solicitante (PRD / auditoria técnica)
+    if (chamado.solicitanteId !== userId) {
       return { error: "Apenas o solicitante pode reprovar o chamado" };
     }
     if (!input.justificativa?.trim()) {
@@ -247,12 +243,15 @@ export async function mudarStatus(
     }
   }
 
+  const agora = new Date();
   const updateData: Record<string, unknown> = { status: input.novoStatus };
   if (input.novoStatus === StatusChamado.AGUARDANDO_VALIDACAO) {
-    updateData.entregueEm = new Date();
+    updateData.entregueEm = agora;
+    updateData.entregaNoPrazo = dentroDoPrazo(agora, chamado.prazoSla);
   }
   if (input.novoStatus === StatusChamado.CONCLUIDO) {
-    updateData.concluidoEm = new Date();
+    updateData.concluidoEm = agora;
+    updateData.conclusaoNoPrazo = dentroDoPrazo(agora, chamado.prazoSla);
   }
 
   await prisma.chamado.update({
@@ -285,7 +284,6 @@ export async function mudarStatus(
     }
   }
   if (input.novoStatus === StatusChamado.CANCELADO) {
-    notificacoes.push({ tipo: "CANCELADO", usuarioId: chamado.solicitanteId });
     if (chamado.responsavelId && chamado.responsavelId !== chamado.solicitanteId) {
       notificacoes.push({ tipo: "CANCELADO", usuarioId: chamado.responsavelId });
     }
@@ -306,56 +304,12 @@ export async function mudarStatus(
   return { success: true };
 }
 
-export async function assumirChamadoIA(chamadoId: string): Promise<ActionResult> {
-  const session = await auth();
-  if (!session) return { error: "Não autorizado" };
-
-  if (session.user.setorTipo !== "IA") {
-    return { error: "Apenas analistas do setor IA podem assumir este chamado" };
-  }
-  if (!["ANALISTA", "GESTOR", "SUPERADMIN"].includes(session.user.role)) {
-    return { error: "Não autorizado" };
-  }
-
-  const chamado = await prisma.chamado.findUnique({
-    where: { id: chamadoId },
-    include: { empresa: false, projeto: { include: { setor: true } } },
-  });
-  if (!chamado) return { error: "Chamado não encontrado" };
-  if (chamado.responsavelId) return { error: "Este chamado já possui responsável" };
-  if (chamado.status !== StatusChamado.ABERTO) {
-    return { error: "Apenas chamados ABERTOS podem ser assumidos" };
-  }
-
-  await prisma.chamado.update({
-    where: { id: chamadoId },
-    data: {
-      responsavelId: session.user.id,
-      status: StatusChamado.EM_ANDAMENTO,
-    },
-  });
-
-  await prisma.historicoStatus.create({
-    data: {
-      statusAntes: StatusChamado.ABERTO,
-      statusDepois: StatusChamado.EM_ANDAMENTO,
-      chamadoId,
-      atorId: session.user.id,
-      justificativa: "Chamado assumido pelo analista",
-    },
-  });
-
-  await prisma.notificacao.create({
-    data: {
-      tipo: "CHAMADO_ASSUMIDO",
-      usuarioId: chamado.solicitanteId,
-      chamadoId,
-    },
-  });
-
-  revalidatePath(`/chamados/${chamadoId}`);
-  revalidatePath("/chamados");
-  return { success: true };
+/** Mantido por compatibilidade: chamados passam a ter responsável na abertura (vínculo empresa × setor). */
+export async function assumirChamadoIA(_chamadoId: string): Promise<ActionResult> {
+  return {
+    error:
+      "Chamados são abertos já com responsável definido pelo vínculo empresa × setor. Use transferência se precisar alterar o responsável.",
+  };
 }
 
 const transferirSchema = z.object({
@@ -369,7 +323,13 @@ export async function transferirChamado(
 ): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
-  if (session.user.role !== "GESTOR" && session.user.role !== "SUPERADMIN") {
+
+  const podeGestorOuAdmin =
+    session.user.role === "GESTOR" || session.user.role === "SUPERADMIN";
+  const podeAnalistaResponsavel =
+    session.user.role === "ANALISTA";
+
+  if (!podeGestorOuAdmin && !podeAnalistaResponsavel) {
     return { error: "Não autorizado" };
   }
 
@@ -379,17 +339,45 @@ export async function transferirChamado(
   });
   if (!chamado) return { error: "Chamado não encontrado" };
 
+  if (
+    chamado.status === StatusChamado.CONCLUIDO ||
+    chamado.status === StatusChamado.CANCELADO
+  ) {
+    return { error: "Não é possível transferir chamados concluídos ou cancelados." };
+  }
+
+  // GESTOR / SUPERADMIN: podem transferir em qualquer status ativo (ex.: EM_ANDAMENTO, AGUARDANDO_VALIDACAO).
+
+  if (podeAnalistaResponsavel) {
+    if (chamado.responsavelId !== session.user.id) {
+      return { error: "Apenas o responsável atual pode transferir este chamado." };
+    }
+    const statusPermite = [
+      StatusChamado.NAO_INICIADO,
+      StatusChamado.EM_ANDAMENTO,
+      StatusChamado.AGUARDANDO_VALIDACAO,
+    ].includes(chamado.status);
+    if (!statusPermite) {
+      return { error: "Transferência não disponível neste status." };
+    }
+  }
+
+  if (session.user.role === "GESTOR" && chamado.setorDestinoId !== session.user.setorId) {
+    return { error: "GESTOR só pode transferir chamados destinados ao seu setor" };
+  }
+
+  if (!chamado.setorDestinoId) {
+    return { error: "Chamado sem setor de destino — não é possível transferir." };
+  }
+
   const novoResponsavel = await prisma.usuario.findUnique({
     where: { id: input.novoResponsavelId },
     include: { setor: true },
   });
   if (!novoResponsavel) return { error: "Responsável não encontrado" };
 
-  // GESTOR só pode transferir dentro do seu setor
-  if (session.user.role === "GESTOR") {
-    if (novoResponsavel.setorId !== session.user.setorId) {
-      return { error: "GESTOR só pode transferir chamados dentro do seu setor" };
-    }
+  if (novoResponsavel.setorId !== chamado.setorDestinoId) {
+    return { error: "O novo responsável deve pertencer ao setor de destino do chamado." };
   }
 
   await prisma.chamado.update({
@@ -426,12 +414,13 @@ export async function cancelarChamado(
 ): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
-  if (session.user.role !== "GESTOR" && session.user.role !== "SUPERADMIN") {
-    return { error: "Apenas GESTOR ou SUPERADMIN podem cancelar chamados" };
-  }
+  if (session.user.role === "TV") return { error: "Não autorizado" };
 
   const chamado = await prisma.chamado.findUnique({ where: { id: chamadoId } });
   if (!chamado) return { error: "Chamado não encontrado" };
+  if (chamado.solicitanteId !== session.user.id) {
+    return { error: "Apenas quem abriu o chamado pode cancelá-lo" };
+  }
   if (chamado.status === StatusChamado.CANCELADO) return { error: "Chamado já cancelado" };
   if (chamado.status === StatusChamado.CONCLUIDO) return { error: "Chamado já concluído" };
 
@@ -446,17 +435,10 @@ export async function cancelarChamado(
       statusDepois: StatusChamado.CANCELADO,
       chamadoId,
       atorId: session.user.id,
-      justificativa: justificativa ?? "Cancelado pelo gestor",
+      justificativa: justificativa ?? "Cancelado pelo solicitante",
     },
   });
 
-  await prisma.notificacao.create({
-    data: {
-      tipo: "CANCELADO",
-      usuarioId: chamado.solicitanteId,
-      chamadoId,
-    },
-  });
   if (chamado.responsavelId && chamado.responsavelId !== chamado.solicitanteId) {
     await prisma.notificacao.create({
       data: {
@@ -472,20 +454,66 @@ export async function cancelarChamado(
   return { success: true };
 }
 
+function podeAtribuirTipoMensagemEspecial(
+  role: Role,
+  userId: string,
+  setorId: string,
+  chamado: {
+    solicitanteId: string;
+    responsavelId: string;
+    setorDestinoId: string | null;
+  }
+): boolean {
+  if (role === "SUPERADMIN") return true;
+  if (chamado.responsavelId === userId) return true;
+  if (role === "GESTOR" && chamado.setorDestinoId === setorId) return true;
+  return false;
+}
+
+const adicionarComentarioSchema = z.object({
+  chamadoId: z.string(),
+  conteudo: z.string().min(1, "Mensagem não pode estar vazia"),
+  tipo: z.nativeEnum(TipoMensagemChat).default(TipoMensagemChat.NORMAL),
+});
+
 export async function adicionarComentario(
   chamadoId: string,
-  conteudo: string
+  conteudo: string,
+  tipo: TipoMensagemChat = TipoMensagemChat.NORMAL
 ): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role === "TV") return { error: "Não autorizado" };
-  if (!conteudo.trim()) return { error: "Comentário não pode estar vazio" };
+
+  const parsed = adicionarComentarioSchema.safeParse({ chamadoId, conteudo, tipo });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
 
   const chamado = await prisma.chamado.findUnique({ where: { id: chamadoId } });
   if (!chamado) return { error: "Chamado não encontrado" };
 
+  let tipoFinal = parsed.data.tipo;
+  if (tipoFinal !== TipoMensagemChat.NORMAL) {
+    const ok = podeAtribuirTipoMensagemEspecial(
+      session.user.role,
+      session.user.id,
+      session.user.setorId,
+      chamado
+    );
+    if (!ok) {
+      return {
+        error:
+          "Apenas quem atende o chamado pode marcar mensagem como “Ação necessária” ou “Resolução”.",
+      };
+    }
+  }
+
   await prisma.comentario.create({
-    data: { conteudo, chamadoId, autorId: session.user.id },
+    data: {
+      conteudo: parsed.data.conteudo.trim(),
+      chamadoId,
+      autorId: session.user.id,
+      tipo: tipoFinal,
+    },
   });
 
   revalidatePath(`/chamados/${chamadoId}`);

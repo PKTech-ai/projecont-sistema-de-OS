@@ -40,11 +40,12 @@ async function main() {
     { nome: "Departamento Pessoal",  tipo: "DP"       as const },
     { nome: "IA",                    tipo: "IA"       as const },
     { nome: "Clientes",              tipo: "CLIENTES" as const },
+    { nome: "Societário",            tipo: "SOCIETARIO" as const },
   ];
   for (const s of setoresDef) await prisma.setor.create({ data: s });
   const setores = await prisma.setor.findMany();
   const S = Object.fromEntries(setores.map((s) => [s.tipo, s]));
-  console.log("✅ 5 setores criados");
+  console.log("✅ 6 setores criados");
 
   // ── 2. USUÁRIOS (admin + 5 — um por setor)
   const hash = (p: string) => bcrypt.hash(p, 10);
@@ -59,11 +60,15 @@ async function main() {
       { nome: "Lúcia Ferreira",  email: "lucia.ferreira@projecont.com.br",senha, role: "GESTOR",     setorId: S["DP"].id       },
       { nome: "Thiago Souza",    email: "thiago.souza@projecont.com.br",  senha, role: "ANALISTA",   setorId: S["IA"].id       },
       { nome: "Painel TV",       email: "tv@projecont.com.br",            senha, role: "TV",         setorId: S["CONTABIL"].id },
+      { nome: "Marina SAC",      email: "sac@projecont.com.br",           senha, role: "SAC",        setorId: S["CLIENTES"].id },
+      { nome: "Ricardo Mota",    email: "societario@projecont.com.br",    senha, role: "ANALISTA",   setorId: S["SOCIETARIO"].id },
+      /** Mesmo setor — para permitir transferência de chamados; vínculos seguem só com Ricardo */
+      { nome: "Apoio Societário", email: "apoio.societario@projecont.com.br", senha, role: "ANALISTA", setorId: S["SOCIETARIO"].id },
     ],
   });
   const usuarios = await prisma.usuario.findMany();
   const U = Object.fromEntries(usuarios.map((u) => [u.email, u]));
-  console.log("✅ 6 usuários criados (admin + 5)");
+  console.log("✅ Usuários criados (incl. admin, setores e SAC)");
 
   // ── 3. EMPRESAS (5)
   const empresasNomes = [
@@ -94,11 +99,28 @@ async function main() {
       // Delta: DP + contábil
       { empresaId: E["Delta Serviços ME"].id,         tipoServico: "DP",      responsavelId: U["lucia.ferreira@projecont.com.br"].id  },
       { empresaId: E["Delta Serviços ME"].id,         tipoServico: "CONTABIL",responsavelId: U["ana.santos@projecont.com.br"].id      },
-      // Epsilon: apenas fiscal
+      // Epsilon: fiscal + DP (chamados de DP no seed)
       { empresaId: E["Epsilon Tecnologia"].id,        tipoServico: "FISCAL",  responsavelId: U["pedro.alves@projecont.com.br"].id     },
+      { empresaId: E["Epsilon Tecnologia"].id,        tipoServico: "DP",    responsavelId: U["lucia.ferreira@projecont.com.br"].id  },
+      // IA + Clientes (SAC)
+      { empresaId: E["Alpha Distribuidora Ltda"].id,   tipoServico: "IA",    responsavelId: U["thiago.souza@projecont.com.br"].id    },
+      { empresaId: E["Beta Consultores S.A."].id,    tipoServico: "IA",    responsavelId: U["thiago.souza@projecont.com.br"].id    },
+      { empresaId: E["Alpha Distribuidora Ltda"].id,   tipoServico: "CLIENTES", responsavelId: U["sac@projecont.com.br"].id },
+      { empresaId: E["Beta Consultores S.A."].id,    tipoServico: "CLIENTES", responsavelId: U["sac@projecont.com.br"].id },
     ],
   });
-  console.log("✅ 9 vínculos criados (múltiplos por empresa)");
+  console.log("✅ Vínculos criados (incl. IA e Clientes)");
+
+  // ── Societário: um responsável para todas as empresas do seed
+  const ricardo = U["societario@projecont.com.br"];
+  await prisma.vinculoEmpresa.createMany({
+    data: empresas.map((e) => ({
+      empresaId: e.id,
+      tipoServico: "SOCIETARIO",
+      responsavelId: ricardo.id,
+    })),
+  });
+  console.log("✅ Vínculos Societário (todas as empresas → um analista)");
 
   // ── 5. PROJETOS IA (3 — suficiente para demonstração)
   await prisma.projeto.createMany({
@@ -118,16 +140,18 @@ async function main() {
   const ana = U["ana.santos@projecont.com.br"];
   const pedro = U["pedro.alves@projecont.com.br"];
   const thiago = U["thiago.souza@projecont.com.br"];
+  const lucia = U["lucia.ferreira@projecont.com.br"];
 
   const [c1, c2, c3, c4, c5] = await Promise.all([
-    // 1 — ABERTO, sem responsável (DP)
+    // 1 — NAO_INICIADO (responsável via vínculo Delta × Contábil)
     prisma.chamado.create({ data: {
       titulo: "Certificado Digital Expirado — Delta Serviços",
       descricao: "O certificado A1 da Delta venceu ontem. Necessário emitir novo urgente pois NFs precisam ser emitidas.",
-      status: "ABERTO", prioridade: "CRITICA",
-      tipo: "INCIDENTE", urgencia: "MUITO_ALTA", impacto: "ALTO",
+      status: "NAO_INICIADO", prioridade: "CRITICA",
+      tipo: "INCIDENTE",
       prazoSla: daysFromNow(1), criadoEm: daysAgo(1),
       solicitanteId: fernanda.id,
+      responsavelId: ana.id,
       empresaId: E["Delta Serviços ME"].id,
       setorDestinoId: S["CONTABIL"].id,
     }}),
@@ -136,7 +160,7 @@ async function main() {
       titulo: "Parcelamento PGFN — Gamma Indústria",
       descricao: "Débito de R$ 85.000 na PGFN referente a IRPJ/2022. Analisar modalidades PERT e preparar documentação.",
       status: "EM_ANDAMENTO", prioridade: "ALTA",
-      tipo: "SOLICITACAO", urgencia: "ALTA", impacto: "ALTO",
+      tipo: "SOLICITACAO",
       prazoSla: daysFromNow(3), criadoEm: daysAgo(4),
       solicitanteId: admin.id,
       responsavelId: pedro.id,
@@ -148,9 +172,10 @@ async function main() {
       titulo: "Alteração de Sócio — Beta Consultores",
       descricao: "Saída do sócio João Ferreira e entrada de Marcos Paulo. Documentação enviada por e-mail.",
       status: "AGUARDANDO_VALIDACAO", prioridade: "MEDIA",
-      tipo: "SOLICITACAO", urgencia: "MEDIA", impacto: "MEDIO",
+      tipo: "SOLICITACAO",
       prazoSla: daysFromNow(5), criadoEm: daysAgo(6),
       entregueEm: daysAgo(1),
+      entregaNoPrazo: true,
       solucao: "Alteração processada no sistema. Contrato social atualizado e enviado para a Junta Comercial. Prazo estimado para registro: 10 dias úteis.",
       solicitanteId: fernanda.id,
       responsavelId: ana.id,
@@ -162,11 +187,13 @@ async function main() {
       titulo: "Deploy Modelo v2.1 — Automação Financeira Alpha",
       descricao: "Deploy da versão 2.1 em produção com rollback automático configurado para taxa de erro > 2% nas primeiras 24h.",
       status: "CONCLUIDO", prioridade: "ALTA",
-      tipo: "SOLICITACAO", urgencia: "ALTA", impacto: "ALTO",
+      tipo: "SOLICITACAO",
       prazoSla: daysAgo(1), criadoEm: daysAgo(14), concluidoEm: daysAgo(2),
+      conclusaoNoPrazo: true,
       solucao: "Deploy realizado com sucesso. Taxa de erro: 0,3% nas primeiras 24h (abaixo do threshold de 2%). Monitoramento encerrado.",
       solicitanteId: admin.id,
       responsavelId: thiago.id,
+      empresaId: E["Alpha Distribuidora Ltda"].id,
       projetoId: P["Automação Financeira Alpha"].id,
       setorDestinoId: S["IA"].id,
     }}),
@@ -175,9 +202,10 @@ async function main() {
       titulo: "Admissão de Funcionário — Epsilon Tecnologia",
       descricao: "Admissão de colaborador cancelada — vaga suspensa por decisão da diretoria.",
       status: "CANCELADO", prioridade: "BAIXA",
-      tipo: "SOLICITACAO", urgencia: "BAIXA", impacto: "BAIXO",
+      tipo: "SOLICITACAO",
       prazoSla: daysAgo(5), criadoEm: daysAgo(10),
       solicitanteId: fernanda.id,
+      responsavelId: lucia.id,
       empresaId: E["Epsilon Tecnologia"].id,
       setorDestinoId: S["DP"].id,
     }}),
@@ -199,11 +227,11 @@ async function main() {
   // ── 9. HISTÓRICO DE STATUS (5)
   await prisma.historicoStatus.createMany({
     data: [
-      { chamadoId: c1.id, statusAntes: "ABERTO",              statusDepois: "ABERTO",              atorId: fernanda.id, criadoEm: daysAgo(1)  },
-      { chamadoId: c2.id, statusAntes: "ABERTO",              statusDepois: "EM_ANDAMENTO",         atorId: pedro.id,    criadoEm: daysAgo(4)  },
+      { chamadoId: c1.id, statusAntes: "NAO_INICIADO",        statusDepois: "NAO_INICIADO",        atorId: fernanda.id, criadoEm: daysAgo(1)  },
+      { chamadoId: c2.id, statusAntes: "NAO_INICIADO",        statusDepois: "EM_ANDAMENTO",         atorId: pedro.id,    criadoEm: daysAgo(4)  },
       { chamadoId: c3.id, statusAntes: "EM_ANDAMENTO",        statusDepois: "AGUARDANDO_VALIDACAO", atorId: ana.id,      criadoEm: daysAgo(1)  },
       { chamadoId: c4.id, statusAntes: "AGUARDANDO_VALIDACAO",statusDepois: "CONCLUIDO",            atorId: admin.id,    criadoEm: daysAgo(2)  },
-      { chamadoId: c5.id, statusAntes: "ABERTO",              statusDepois: "CANCELADO",            atorId: admin.id,    justificativa: "Vaga suspensa por decisão da diretoria.", criadoEm: daysAgo(5) },
+      { chamadoId: c5.id, statusAntes: "NAO_INICIADO",        statusDepois: "CANCELADO",            atorId: admin.id,    justificativa: "Vaga suspensa por decisão da diretoria.", criadoEm: daysAgo(5) },
     ],
   });
   console.log("✅ 5 históricos criados");
@@ -233,6 +261,8 @@ async function main() {
   console.log("   GESTOR DP  : lucia.ferreira@projecont.com.br  → projecont@2026");
   console.log("   ANALISTA IA: thiago.souza@projecont.com.br    → projecont@2026");
   console.log("   PAINEL TV  : tv@projecont.com.br              → projecont@2026");
+  console.log("   SOCIETÁRIO : societario@projecont.com.br       → projecont@2026");
+  console.log("   APOIO SOC. : apoio.societario@projecont.com.br → projecont@2026");
   console.log("═══════════════════════════════════════════════════════");
 }
 

@@ -71,7 +71,7 @@
 - [x] Server Action: criarProjeto(), editarProjeto(), desativarProjeto()
 - [x] Página admin/usuarios (SUPERADMIN)
 - [x] Página admin/empresas com VinculoEmpresa (SUPERADMIN)
-- [x] Página admin/templates (SUPERADMIN)
+- [ ] ~~Página admin/templates~~ — removido do escopo (sem módulo de templates)
 - [x] Página admin/projetos (ANALISTA/GESTOR IA + SUPERADMIN)
 - [x] Página TV fullscreen por setor com auto-refresh 30s
 - [x] Componente TVRefresher

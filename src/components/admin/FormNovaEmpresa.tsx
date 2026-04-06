@@ -26,7 +26,7 @@ export function FormNovaEmpresa() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+      <Button onClick={() => setOpen(true)} className="bg-ds-info hover:bg-ds-ink-dark text-white">
         <Building2 className="h-4 w-4 mr-2" />
         Nova Empresa
       </Button>
@@ -34,24 +34,24 @@ export function FormNovaEmpresa() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-[#001F3E]">Cadastrar Empresa</DialogTitle>
+            <DialogTitle className="text-ds-ink">Cadastrar Empresa</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4 mt-2">
             <div>
-              <label className="block text-xs font-medium text-[#64789B] mb-1">Razão Social / Nome</label>
+              <label className="block text-xs font-medium text-ds-ash mb-1">Razão Social / Nome</label>
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                className="w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40 focus:border-[#1AB6D9]"
+                className="w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ds-info/40 focus:border-ds-info"
                 placeholder="Ex: Alpha Distribuidora Ltda"
               />
               {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => { setNome(""); setOpen(false); }} className="border-[#DCE2EB] text-[#64789B]">
+              <Button type="button" variant="outline" onClick={() => { setNome(""); setOpen(false); }} className="border-ds-pebble text-ds-ash">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+              <Button type="submit" disabled={loading} className="bg-ds-info hover:bg-ds-ink-dark text-white">
                 {loading ? "Salvando..." : "Cadastrar"}
               </Button>
             </div>

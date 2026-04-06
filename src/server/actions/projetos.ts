@@ -6,9 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/types";
 
-function podeGerenciarProjetos(role: string, setorTipo: string) {
-  if (role === "SUPERADMIN") return true;
-  return setorTipo === "IA" && (role === "ANALISTA" || role === "GESTOR");
+function podeAcessarProjetos(role: string) {
+  return role === "SUPERADMIN" || role === "ANALISTA" || role === "GESTOR";
 }
 
 const projetoSchema = z.object({
@@ -22,8 +21,12 @@ export async function criarProjeto(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
-  if (!podeGerenciarProjetos(session.user.role, session.user.setorTipo)) {
-    return { error: "Apenas ANALISTA/GESTOR do setor IA ou SUPERADMIN podem criar projetos" };
+  if (!podeAcessarProjetos(session.user.role)) {
+    return { error: "Não autorizado" };
+  }
+
+  if (session.user.role !== "SUPERADMIN" && input.setorId !== session.user.setorId) {
+    return { error: "Só pode criar projetos no seu setor" };
   }
 
   const projeto = await prisma.projeto.create({
@@ -40,8 +43,18 @@ export async function editarProjeto(
 ): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
-  if (!podeGerenciarProjetos(session.user.role, session.user.setorTipo)) {
+  if (!podeAcessarProjetos(session.user.role)) {
     return { error: "Não autorizado" };
+  }
+
+  const projeto = await prisma.projeto.findUnique({ where: { id } });
+  if (!projeto) return { error: "Projeto não encontrado" };
+
+  if (session.user.role !== "SUPERADMIN" && projeto.setorId !== session.user.setorId) {
+    return { error: "Não autorizado" };
+  }
+  if (session.user.role !== "SUPERADMIN" && input.setorId && input.setorId !== session.user.setorId) {
+    return { error: "Não pode mover projeto para outro setor" };
   }
 
   await prisma.projeto.update({ where: { id }, data: input });
@@ -52,7 +65,14 @@ export async function editarProjeto(
 export async function ativarDesativarProjeto(id: string, ativo: boolean): Promise<ActionResult> {
   const session = await auth();
   if (!session) return { error: "Não autorizado" };
-  if (!podeGerenciarProjetos(session.user.role, session.user.setorTipo ?? "")) {
+  if (!podeAcessarProjetos(session.user.role)) {
+    return { error: "Não autorizado" };
+  }
+
+  const projeto = await prisma.projeto.findUnique({ where: { id } });
+  if (!projeto) return { error: "Projeto não encontrado" };
+
+  if (session.user.role !== "SUPERADMIN" && projeto.setorId !== session.user.setorId) {
     return { error: "Não autorizado" };
   }
 

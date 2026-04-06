@@ -27,7 +27,7 @@ export function formatDateTime(date: Date | string | null | undefined): string {
 }
 
 export const STATUS_LABELS: Record<StatusChamado, string> = {
-  ABERTO: "Aberto",
+  NAO_INICIADO: "Não iniciado",
   EM_ANDAMENTO: "Em Andamento",
   AGUARDANDO_VALIDACAO: "Aguardando Validação",
   CONCLUIDO: "Concluído",
@@ -41,17 +41,18 @@ export const PRIORIDADE_LABELS: Record<Prioridade, string> = {
   CRITICA: "Crítica",
 };
 
+/** Design system v2 — badges semânticos (success / warning / danger / info) */
 export const STATUS_COLORS: Record<StatusChamado, string> = {
-  ABERTO: "bg-blue-100 text-blue-700 border-blue-200",
-  EM_ANDAMENTO: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  AGUARDANDO_VALIDACAO: "bg-purple-100 text-purple-800 border-purple-200",
-  CONCLUIDO: "bg-green-100 text-green-800 border-green-200",
-  CANCELADO: "bg-zinc-100 text-zinc-500 border-zinc-200",
+  NAO_INICIADO: "bg-ds-info-bg text-ds-info-fg border-ds-pebble",
+  EM_ANDAMENTO: "bg-ds-warning-bg text-ds-warning-fg border-ds-pebble",
+  AGUARDANDO_VALIDACAO: "bg-ds-linen text-ds-charcoal border-ds-pebble",
+  CONCLUIDO: "bg-ds-success-bg text-ds-success-fg border-ds-pebble",
+  CANCELADO: "bg-ds-linen text-ds-ash border-ds-pebble",
 };
 
 export const PRIORIDADE_COLORS: Record<Prioridade, string> = {
-  BAIXA: "bg-green-100 text-green-800 border-green-200",
-  MEDIA: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  ALTA: "bg-orange-100 text-orange-800 border-orange-200",
-  CRITICA: "bg-red-100 text-red-800 border-red-200",
+  BAIXA: "bg-ds-success-bg text-ds-success-fg border-ds-pebble",
+  MEDIA: "bg-ds-warning-bg text-ds-warning-fg border-ds-pebble",
+  ALTA: "bg-orange-100 text-orange-900 border-ds-pebble",
+  CRITICA: "bg-ds-danger-bg text-ds-danger-fg border-ds-pebble",
 };

@@ -18,7 +18,7 @@
 - Cancelamento (GESTOR ou SUPERADMIN, qualquer status)
 - Histórico de status completo (HistoricoStatus)
 - Comentários por chamado
-- Cálculo de SLA por dias úteis (lib/sla.ts)
+- Cálculo de SLA em horas úteis por prioridade (`lib/sla.ts`, `lib/prioridade.ts`)
 - Persona de cliente (emNomeDeCliente — apenas GESTOR/SUPERADMIN)
 
 ### Módulo C: Projetos (Setor IA)
@@ -34,7 +34,6 @@
 ### Módulo E: Painel Admin (SUPERADMIN)
 - CRUD de usuários (ativar/desativar, alterar role/setor)
 - CRUD de empresas e VinculoEmpresa
-- CRUD de templates de chamado
 
 ### Módulo F: TV Display
 - Página fullscreen read-only por setor
@@ -58,6 +57,7 @@
 - Gestão de demandas internas de um mesmo setor
 - tRPC ou qualquer camada de RPC adicional
 - Deploy em Vercel ou cloud pública
+- Módulo de templates de descrição de chamado (fora do produto; descrição livre no formulário)
 
 ---
 

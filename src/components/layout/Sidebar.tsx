@@ -9,10 +9,11 @@ import {
   FolderKanban,
   Users,
   Building2,
-  FileText,
   FolderOpen,
   ChevronRight,
   LogOut,
+  Headphones,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProjecontLogo } from "@/components/ui/logo";
@@ -44,29 +45,42 @@ const navItems: NavItem[] = [
     tourId: "nav-chamados",
   },
   {
+    label: "Chamado p/ cliente",
+    href: "/sac/novo",
+    icon: Headphones,
+    roles: ["SAC", "SUPERADMIN"],
+    tourId: "nav-sac",
+  },
+  {
     label: "Meu Setor",
     href: "/setor",
     icon: FolderKanban,
-    roles: ["ANALISTA", "GESTOR", "SUPERADMIN"],
+    roles: ["ANALISTA", "GESTOR", "SAC", "SUPERADMIN"],
     tourId: "nav-setor",
   },
 ];
 
 const adminItems: NavItem[] = [
   {
+    label: "Desempenho",
+    href: "/admin/desempenho",
+    icon: BarChart3,
+    roles: ["SUPERADMIN", "GESTOR"],
+  },
+  {
     label: "Usuários",
     href: "/admin/usuarios",
     icon: Users,
-    roles: ["SUPERADMIN"],
+    roles: ["SUPERADMIN", "GESTOR"],
   },
   {
     label: "Empresas",
     href: "/admin/empresas",
     icon: Building2,
-    roles: ["SUPERADMIN"],
+    roles: ["SUPERADMIN", "GESTOR"],
   },
   {
-    label: "Projetos IA",
+    label: "Projetos do setor",
     href: "/admin/projetos",
     icon: FolderOpen,
     roles: ["SUPERADMIN", "ANALISTA", "GESTOR"],
@@ -89,9 +103,8 @@ export function Sidebar({ role, setorTipo }: SidebarProps) {
   function canSee(item: NavItem) {
     if (!item.roles) return true;
     if (item.href === "/admin/projetos") {
-      // IA sector analysts/managers + SUPERADMIN
       if (role === "SUPERADMIN") return true;
-      return setorTipo === "IA" && (role === "ANALISTA" || role === "GESTOR");
+      return role === "ANALISTA" || role === "GESTOR";
     }
     return item.roles.includes(role);
   }
@@ -100,7 +113,7 @@ export function Sidebar({ role, setorTipo }: SidebarProps) {
   const visibleAdmin = adminItems.filter(canSee);
 
   return (
-    <aside className="w-60 h-[100dvh] bg-[#001F3E] flex flex-col shrink-0">
+    <aside className="w-60 h-[100dvh] bg-ds-ink flex flex-col shrink-0">
       {/* Logo area */}
       <div className="px-6 py-6 border-b border-white/10">
         <ProjecontLogo variant="dark" size="sm" showTagline />
@@ -130,7 +143,7 @@ export function Sidebar({ role, setorTipo }: SidebarProps) {
       <div className="px-3 py-4 border-t border-white/10 space-y-1" data-tour="sidebar-footer">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#A8A8A7] hover:bg-white/5 hover:text-red-400 transition-colors group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-brand-gray-light hover:bg-white/5 hover:text-red-400 transition-colors group"
         >
           <LogOut className="h-4 w-4 shrink-0 group-hover:text-red-400" />
           <span className="flex-1 text-left">Sair do sistema</span>
@@ -153,11 +166,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
         active
-          ? "bg-[#1AB6D9]/15 text-[#1AB6D9] border-l-[3px] border-[#1AB6D9] pl-[9px]"
-          : "text-[#A8A8A7] hover:bg-white/5 hover:text-white"
+          ? "bg-ds-ink-dark text-ds-paper border-l-[3px] border-ds-paper pl-[9px]"
+          : "text-brand-gray-light hover:bg-ds-ink-dark/80 hover:text-ds-paper"
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#1AB6D9]" : "")} />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-ds-paper" : "")} />
       <span className="flex-1">{item.label}</span>
       {active && <ChevronRight className="h-3 w-3 opacity-50" />}
     </Link>

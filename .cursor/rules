@@ -13,7 +13,7 @@
 - Lógica de negócio → src/server/actions/ (Server Actions)
 - Consultas ao banco → src/server/queries/
 - Singleton Prisma → src/lib/prisma.ts (nunca instanciar direto)
-- Cálculo de datas → src/lib/sla.ts (nunca Date aritmético direto)
+- Cálculo de SLA → src/lib/sla.ts (`adicionarHorasUteis` para prazo de chamado; jornada 9h–17h seg–sex)
 - Componentes de domínio → src/components/chamados/
 - Componentes shadcn → src/components/ui/ (nunca editar)
 - Job de auto-fechamento → src/jobs/autoFechar.ts (lógica isolada)
@@ -28,7 +28,7 @@
    em chamados para setores Contábil/Fiscal/DP
 6. Chamados para setor IA: responsável NULL até ser assumido
 7. LogPersona DEVE ser criado sempre que emNomeDeCliente=true
-8. Prazo SLA DEVE ser calculado com adicionarDiasUteis() de lib/sla.ts
+8. Prazo SLA DEVE ser calculado com adicionarHorasUteis() em lib/sla.ts conforme prioridade (ver prioridade.ts)
 9. TRANSFERIR: GESTOR (mesmo setor) ou SUPERADMIN (qualquer setor)
 10. CANCELAR: apenas GESTOR ou SUPERADMIN, em qualquer status
 11. PERSONA DE CLIENTE: emNomeDeCliente=true — apenas GESTOR ou SUPERADMIN
@@ -41,16 +41,12 @@
 - Sessão TV é read-only — nunca permitir mutações
 - Erros de Server Action retornam { error: string } nunca throw direto ao client
 
-## DESIGN SYSTEM — IDENTIDADE VISUAL PROJECONT
-- brand-navy: #001F3E (sidebar, navbar, login bg)
-- brand-cyan: #1AB6D9 (botões primários, item ativo, destaque)
-- brand-blue: #2082BE (botões secundários, hover)
-- brand-slate: #64789B (texto secundário, ícones inativos)
-- brand-charcoal: #3E3E3D (texto principal)
-- brand-ice: #DCE2EB (fundos sutis, tabelas)
-- Sidebar: fundo brand-navy, item ativo barra lateral brand-cyan
-- Botão primário: bg-brand-cyan text-white hover:bg-brand-blue
-- NUNCA usar outras paletas ou bibliotecas de ícones além de lucide-react
+## DESIGN SYSTEM — DS v2 (Ink & Paper) — ver `globals.css` tokens `ds-*`
+- Fundo app: Paper `#F7F6F2`, texto: Ink `#1A1916`, bordas: Pebble `#DDDDD5`
+- Sidebar / blocos escuros: Ink + hover/active Ink Dark `#2A2926`; item ativo texto Paper
+- Ações primárias shadcn: `primary` = Ink (botão escuro); destaque informativo: `ds-info` `#378ADD`
+- Tipografia: DM Sans + DM Mono (`layout.tsx`); não reintroduzir paleta legacy cyan/navy só por hábito
+- Ícones: lucide-react apenas
 
 ## BADGES DE STATUS (cores fixas)
 - ABERTO: bg-blue-100 text-blue-700

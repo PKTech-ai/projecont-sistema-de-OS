@@ -22,10 +22,10 @@ export function ProjecontLogo({
   };
 
   const s = sizes[size];
-  const iconColor = isDark ? "#FFFFFF" : "#001F3E";
-  const accentColor = isDark ? "#1AB6D9" : "#1AB6D9";
-  const textColor = isDark ? "text-white" : "text-[#001F3E]";
-  const taglineColor = isDark ? "text-white/60" : "text-[#64789B]";
+  const iconColor = isDark ? "#F7F6F2" : "#1A1916";
+  const accentColor = isDark ? "#378ADD" : "#378ADD";
+  const textColor = isDark ? "text-white" : "text-ds-ink";
+  const taglineColor = isDark ? "text-white/60" : "text-ds-ash";
 
   return (
     <div className={cn("flex items-center gap-2.5", className)}>

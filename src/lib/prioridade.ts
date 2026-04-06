@@ -1,52 +1,4 @@
-import type { Urgencia, Impacto, Prioridade } from "@prisma/client";
-
-// ─── Matriz GLPI: Urgência × Impacto → Prioridade ────────────────────────────
-//
-// Reproduz a lógica do GLPI (https://glpi-project.org):
-//   Prioridade = média ponderada de urgência (60%) + impacto (40%)
-//   Resultado mapeado para os 4 níveis do sistema
-
-const PESO: Record<string, number> = {
-  MUITO_BAIXA: 1,
-  BAIXA:       2,
-  MEDIA:       3,
-  ALTA:        4,
-  MUITO_ALTA:  5,
-  MUITO_BAIXO: 1,
-  BAIXO:       2,
-  MEDIO:       3,
-  ALTO:        4,
-  MUITO_ALTO:  5,
-};
-
-export function calcularPrioridade(
-  urgencia: Urgencia,
-  impacto: Impacto
-): Prioridade {
-  const score = PESO[urgencia] * 0.6 + PESO[impacto] * 0.4;
-
-  if (score >= 4.2) return "CRITICA";
-  if (score >= 3.0) return "ALTA";
-  if (score >= 2.0) return "MEDIA";
-  return "BAIXA";
-}
-
-// Labels para exibição
-export const URGENCIA_LABELS: Record<Urgencia, string> = {
-  MUITO_BAIXA: "Muito Baixa",
-  BAIXA:       "Baixa",
-  MEDIA:       "Média",
-  ALTA:        "Alta",
-  MUITO_ALTA:  "Muito Alta",
-};
-
-export const IMPACTO_LABELS: Record<Impacto, string> = {
-  MUITO_BAIXO: "Muito Baixo",
-  BAIXO:       "Baixo",
-  MEDIO:       "Médio",
-  ALTO:        "Alto",
-  MUITO_ALTO:  "Muito Alto",
-};
+import type { Prioridade } from "@prisma/client";
 
 export const TIPO_CHAMADO_LABELS = {
   INCIDENTE:   "Incidente",
@@ -57,3 +9,53 @@ export const TIPO_CHAMADO_DESC = {
   INCIDENTE:   "Algo parou de funcionar ou está incorreto",
   SOLICITACAO: "Pedido de novo serviço ou demanda planejada",
 } as const;
+
+/** Prazo fixo em horas úteis (seg–sex, 9h–17h) por prioridade — não negociável no formulário */
+export const PRAZO_HORAS_UTEIS_POR_PRIORIDADE: Record<Prioridade, number> = {
+  CRITICA: 4,
+  ALTA: 8,
+  MEDIA: 24,
+  BAIXA: 48,
+};
+
+/** @deprecated use PRAZO_HORAS_UTEIS_POR_PRIORIDADE */
+export const SLA_HORAS_UTEIS_POR_PRIORIDADE = PRAZO_HORAS_UTEIS_POR_PRIORIDADE;
+
+export type PrioridadeGuiaItem = {
+  prioridade: Prioridade;
+  titulo: string;
+  quandoUsar: string;
+  prazoHorasUteis: number;
+};
+
+/** Textos para orientar o solicitante (poucas opções, regra clara) */
+export const PRIORIDADE_GUIA: PrioridadeGuiaItem[] = [
+  {
+    prioridade: "BAIXA",
+    titulo: "Baixa",
+    quandoUsar:
+      "Melhoria ou dúvida que pode esperar sem atrapalhar o trabalho de hoje. Ex.: sugestão de relatório, ajuste cosmético, dúvida que você consegue contornar.",
+    prazoHorasUteis: PRAZO_HORAS_UTEIS_POR_PRIORIDADE.BAIXA,
+  },
+  {
+    prioridade: "MEDIA",
+    titulo: "Média",
+    quandoUsar:
+      "Importante, mas dá para se organizar em alguns dias. Ex.: correção que não paralisa a operação, pedido com prazo ainda folgado.",
+    prazoHorasUteis: PRAZO_HORAS_UTEIS_POR_PRIORIDADE.MEDIA,
+  },
+  {
+    prioridade: "ALTA",
+    titulo: "Alta",
+    quandoUsar:
+      "Impacta o trabalho de hoje ou de clientes e precisa tratamento no mesmo dia útil. Ex.: erro que impede lançamento, prazo fiscal curto, fila de atendimento prejudicada.",
+    prazoHorasUteis: PRAZO_HORAS_UTEIS_POR_PRIORIDADE.ALTA,
+  },
+  {
+    prioridade: "CRITICA",
+    titulo: "Crítica",
+    quandoUsar:
+      "Parada forte, risco imediato ou bloqueio severo para a empresa ou vários clientes. Ex.: sistema parado para muita gente, impossibilidade de cumprir obrigação hoje. Use só no que é realmente urgente.",
+    prazoHorasUteis: PRAZO_HORAS_UTEIS_POR_PRIORIDADE.CRITICA,
+  },
+];

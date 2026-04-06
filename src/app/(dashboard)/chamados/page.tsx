@@ -15,7 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Headphones } from "lucide-react";
+import { PageContextNav } from "@/components/layout/PageContextNav";
+import { DashboardMainScroll } from "@/components/layout/DashboardMainScroll";
 
 export default async function ChamadosPage({
   searchParams,
@@ -35,42 +37,57 @@ export default async function ChamadosPage({
     page,
   });
 
+  const isSac = session.user.role === "SAC";
+  const novoChamadoHref = isSac ? "/sac/novo" : "/chamados/novo";
+  const novoChamadoLabel = isSac ? "Chamado para cliente" : "Novo chamado";
+
   return (
+    <DashboardMainScroll>
     <div className="space-y-6">
+      <PageContextNav
+        items={[
+          { label: "Painel inicial", href: "/" },
+          { label: "Chamados" },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#001F3E]">Chamados</h2>
-          <p className="text-[#64789B] text-sm mt-1">
+          <h2 className="text-2xl font-bold text-ds-ink">Chamados</h2>
+          <p className="text-ds-ash text-sm mt-1">
             {total} chamado{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}
           </p>
         </div>
         <Button
-          render={<Link href="/chamados/novo" />}
+          render={<Link href={novoChamadoHref} />}
           nativeButton={false}
-          className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white"
+          className="bg-ds-ink hover:bg-ds-ink-dark text-ds-paper"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Chamado
+          {isSac ? (
+            <Headphones className="h-4 w-4 mr-2" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          {novoChamadoLabel}
         </Button>
       </div>
 
-      <div className="bg-white rounded-xl border border-[#DCE2EB] overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-pebble overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#DCE2EB]/50 hover:bg-[#DCE2EB]/50">
-              <TableHead className="text-[#001F3E] font-semibold">Título</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Status</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Prioridade</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Destino</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Responsável</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">SLA</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Criado em</TableHead>
+            <TableRow className="bg-ds-pebble/50 hover:bg-ds-pebble/50">
+              <TableHead className="text-ds-ink font-semibold">Título</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Status</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Prioridade</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Destino</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Responsável</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Prazo</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Criado em</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {chamados.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-[#64789B]">
+                <TableCell colSpan={7} className="text-center py-12 text-ds-ash">
                   Nenhum chamado encontrado.
                 </TableCell>
               </TableRow>
@@ -78,12 +95,12 @@ export default async function ChamadosPage({
               chamados.map((c, i) => (
                 <TableRow
                   key={c.id}
-                  className={i % 2 === 1 ? "bg-[#F8FAFC]" : "bg-white"}
+                  className={i % 2 === 1 ? "bg-ds-paper" : "bg-white"}
                 >
                   <TableCell className="font-medium">
                     <Link
                       href={`/chamados/${c.id}`}
-                      className="text-[#001F3E] hover:text-[#1AB6D9] hover:underline transition-colors"
+                      className="text-ds-ink hover:text-ds-info hover:underline transition-colors"
                     >
                       {c.titulo}
                     </Link>
@@ -94,18 +111,18 @@ export default async function ChamadosPage({
                   <TableCell>
                     <ChamadoPrioridade prioridade={c.prioridade} />
                   </TableCell>
-                  <TableCell className="text-[#3E3E3D] text-sm">
+                  <TableCell className="text-ds-charcoal text-sm">
                     {c.empresa?.nome ?? c.projeto?.nome ?? "—"}
                   </TableCell>
-                  <TableCell className="text-[#3E3E3D] text-sm">
+                  <TableCell className="text-ds-charcoal text-sm">
                     {c.responsavel?.nome ?? (
-                      <span className="text-[#8E8E8D] italic">Não atribuído</span>
+                      <span className="text-brand-gray-mid italic">Não atribuído</span>
                     )}
                   </TableCell>
                   <TableCell>
                     <SlaIndicator prazoSla={c.prazoSla} status={c.status} />
                   </TableCell>
-                  <TableCell className="text-[#64789B] text-sm">
+                  <TableCell className="text-ds-ash text-sm">
                     {formatDate(c.criadoEm)}
                   </TableCell>
                 </TableRow>
@@ -126,8 +143,8 @@ export default async function ChamadosPage({
               size="sm"
               className={
                 p === page
-                  ? "bg-[#1AB6D9] hover:bg-[#2082BE] text-white"
-                  : "border-[#DCE2EB] text-[#64789B]"
+                  ? "bg-ds-info hover:bg-ds-ink-dark text-white"
+                  : "border-ds-pebble text-ds-ash"
               }
             >
               {p}
@@ -136,5 +153,6 @@ export default async function ChamadosPage({
         </div>
       )}
     </div>
+    </DashboardMainScroll>
   );
 }

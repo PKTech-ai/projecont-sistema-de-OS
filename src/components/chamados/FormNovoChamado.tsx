@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,44 +18,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  calcularPrioridade,
-  URGENCIA_LABELS,
-  IMPACTO_LABELS,
-  TIPO_CHAMADO_LABELS,
-  TIPO_CHAMADO_DESC,
-} from "@/lib/prioridade";
-import type {
-  Setor,
-  Empresa,
-  Projeto,
-  Role,
-  TipoSetor,
-  Urgencia,
-  Impacto,
-  VinculoEmpresa,
-} from "@prisma/client";
+import { PRIORIDADE_GUIA } from "@/lib/prioridade";
+import type { Setor, Empresa, Projeto, Prioridade, VinculoEmpresa } from "@prisma/client";
 import {
   AlertCircle,
-  Wrench,
   Zap,
   ArrowDown,
   ArrowUp,
   Minus,
   User2,
+  Info,
 } from "lucide-react";
+import { JORNADA_INICIO_HORA, JORNADA_FIM_HORA } from "@/lib/sla";
 
 const schema = z.object({
   titulo: z.string().min(5, "Mínimo 5 caracteres"),
   descricao: z.string().min(10, "Mínimo 10 caracteres"),
-  tipo: z.enum(["INCIDENTE", "SOLICITACAO"]),
-  urgencia: z.enum(["MUITO_BAIXA", "BAIXA", "MEDIA", "ALTA", "MUITO_ALTA"]),
-  impacto: z.enum(["MUITO_BAIXO", "BAIXO", "MEDIO", "ALTO", "MUITO_ALTO"]),
+  prioridade: z.enum(["BAIXA", "MEDIA", "ALTA", "CRITICA"]),
   setorDestinoId: z.string().min(1, "Selecione o setor"),
-  empresaId: z.string().optional().nullable(),
+  empresaId: z.string().min(1, "Selecione a empresa"),
   projetoId: z.string().optional().nullable(),
-  emNomeDeCliente: z.boolean(),
-  empresaClienteId: z.string().optional().nullable(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -69,30 +50,43 @@ interface FormNovoChamadoProps {
   setores: Setor[];
   empresas: EmpresaComVinculos[];
   projetos: (Projeto & { setor: Setor })[];
-  currentUserRole: Role;
 }
 
-const SETORES_COM_EMPRESA: TipoSetor[] = ["CONTABIL", "FISCAL", "DP"];
-
-const PRIORIDADE_CONFIG = {
-  BAIXA: { label: "Baixa", color: "bg-green-100 text-green-800 border-green-200", icon: ArrowDown },
-  MEDIA: { label: "Média", color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Minus },
-  ALTA: { label: "Alta", color: "bg-orange-100 text-orange-800 border-orange-200", icon: ArrowUp },
-  CRITICA: { label: "Crítica", color: "bg-red-100 text-red-800 border-red-200", icon: Zap },
+const PRIORIDADE_CONFIG: Record<
+  Prioridade,
+  { label: string; color: string; icon: typeof ArrowDown }
+> = {
+  BAIXA: {
+    label: "Baixa",
+    color: "bg-ds-success-bg text-ds-success-fg border-ds-pebble",
+    icon: ArrowDown,
+  },
+  MEDIA: {
+    label: "Média",
+    color: "bg-ds-warning-bg text-ds-warning-fg border-ds-pebble",
+    icon: Minus,
+  },
+  ALTA: {
+    label: "Alta",
+    color: "bg-ds-warning-bg text-ds-warning-fg border-ds-warning ring-1 ring-ds-warning/30",
+    icon: ArrowUp,
+  },
+  CRITICA: {
+    label: "Crítica",
+    color: "bg-ds-danger-bg text-ds-danger-fg border-ds-pebble",
+    icon: Zap,
+  },
 };
 
 export function FormNovoChamado({
   setores,
   empresas,
   projetos,
-  currentUserRole,
 }: FormNovoChamadoProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [responsavelPreview, setResponsavelPreview] = useState<string | null>(null);
-  const [urgenciaDisplay, setUrgenciaDisplay] = useState<Urgencia>("MEDIA");
-  const [impactoDisplay, setImpactoDisplay] = useState<Impacto>("MEDIO");
 
   const {
     register,
@@ -103,39 +97,61 @@ export function FormNovoChamado({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      tipo: "SOLICITACAO",
-      urgencia: "MEDIA",
-      impacto: "MEDIO",
-      emNomeDeCliente: false,
+      prioridade: "MEDIA",
+      empresaId: "",
+      setorDestinoId: "",
+      projetoId: null as string | null,
     },
   });
 
   const setorDestinoId = watch("setorDestinoId");
   const empresaId = watch("empresaId");
-  const emNomeDeCliente = watch("emNomeDeCliente");
-  const urgencia = watch("urgencia");
-  const impacto = watch("impacto");
-  const tipoWatch = watch("tipo");
+  const prioridadeWatch = watch("prioridade");
+  const projetoIdWatch = watch("projetoId");
 
   const setorSelecionado = setores.find((s) => s.id === setorDestinoId);
-  const precisaEmpresa = setorSelecionado && SETORES_COM_EMPRESA.includes(setorSelecionado.tipo as TipoSetor);
+  const empresasFiltradas = setorSelecionado
+    ? empresas.filter((e) =>
+        e.vinculos.some((v) => v.tipoServico === setorSelecionado.tipo)
+      )
+    : [];
   const isSetorIA = setorSelecionado?.tipo === "IA";
   const projetosFiltrados = projetos.filter((p) => p.setor.tipo === "IA");
 
-  // Calcular prioridade automaticamente
-  const prioridadeCalculada = urgencia && impacto
-    ? calcularPrioridade(urgencia as Urgencia, impacto as Impacto)
-    : "MEDIA";
-  const PriorIcon = PRIORIDADE_CONFIG[prioridadeCalculada].icon;
+  /** Base UI: `items` faz o trigger mostrar o nome, não o id bruto (evita cuid/valor solto). */
+  const setorItems = useMemo(
+    () => Object.fromEntries(setores.map((s) => [s.id, s.nome] as const)),
+    [setores]
+  );
+  const empresaItems = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of empresasFiltradas) m[e.id] = e.nome;
+    if (empresaId && m[empresaId] === undefined) {
+      const found = empresas.find((x) => x.id === empresaId);
+      if (found) m[empresaId] = found.nome;
+    }
+    return m;
+  }, [empresasFiltradas, empresaId, empresas]);
 
-  // Preview de responsável com base em empresa + setor
+  const projetoItems = useMemo(() => {
+    const map: Record<string, string> = { __none__: "— Nenhum —" };
+    for (const p of projetosFiltrados) map[p.id] = p.nome;
+    return map;
+  }, [projetosFiltrados]);
+
+  const prioridadeSel = (prioridadeWatch ?? "MEDIA") as Prioridade;
+  const PriorIcon = PRIORIDADE_CONFIG[prioridadeSel].icon;
+
   useEffect(() => {
-    if (!empresaId || empresaId === "__none__" || !setorSelecionado) {
+    if (!empresaId || !setorSelecionado) {
       setResponsavelPreview(null);
       return;
     }
     const empresa = empresas.find((e) => e.id === empresaId);
-    if (!empresa) { setResponsavelPreview(null); return; }
+    if (!empresa) {
+      setResponsavelPreview(null);
+      return;
+    }
 
     const vinculo = empresa.vinculos.find(
       (v) => v.tipoServico === setorSelecionado.tipo
@@ -147,13 +163,15 @@ export function FormNovoChamado({
     setLoading(true);
     setError(null);
 
-    // Passa prioridade calculada automaticamente
     const result = await criarChamado({
-      ...data,
-      prioridade: prioridadeCalculada,
-      empresaId: data.empresaId === "__none__" ? null : data.empresaId,
+      titulo: data.titulo,
+      descricao: data.descricao,
+      prioridade: data.prioridade,
+      setorDestinoId: data.setorDestinoId,
+      emNomeDeCliente: false,
+      empresaId: data.empresaId,
       projetoId: data.projetoId === "__none__" ? null : data.projetoId,
-      empresaClienteId: data.empresaClienteId === "__none__" ? null : data.empresaClienteId,
+      empresaClienteId: null,
     });
 
     if ("error" in result) {
@@ -166,121 +184,92 @@ export function FormNovoChamado({
   }
 
   return (
-    <Card className="border-[#DCE2EB]">
+    <Card className="border-ds-pebble rounded-[9px] bg-white/95 shadow-sm">
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-
-          {/* ── Tipo de chamado ─────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <Label className="text-[#3E3E3D] font-medium">Tipo de chamado *</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {(["INCIDENTE", "SOLICITACAO"] as const).map((tipo) => (
-                <button
-                  key={tipo}
-                  type="button"
-                  onClick={() => setValue("tipo", tipo)}
-                  className={`flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-all ${tipoWatch === tipo
-                      ? tipo === "INCIDENTE"
-                        ? "border-red-400 bg-red-50"
-                        : "border-[#1AB6D9] bg-blue-50"
-                      : "border-[#DCE2EB] bg-white hover:border-[#64789B]"
-                    }`}
-                >
-                  {tipo === "INCIDENTE" ? (
-                    <AlertCircle className={`h-5 w-5 mt-0.5 flex-shrink-0 ${tipoWatch === tipo ? "text-red-500" : "text-[#64789B]"}`} />
-                  ) : (
-                    <Wrench className={`h-5 w-5 mt-0.5 flex-shrink-0 ${tipoWatch === tipo ? "text-[#1AB6D9]" : "text-[#64789B]"}`} />
-                  )}
-                  <div>
-                    <p className={`font-semibold text-sm ${tipoWatch === tipo ? "text-[#001F3E]" : "text-[#3E3E3D]"}`}>
-                      {TIPO_CHAMADO_LABELS[tipo]}
-                    </p>
-                    <p className="text-xs text-[#64789B] mt-0.5">{TIPO_CHAMADO_DESC[tipo]}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <input type="hidden" {...register("setorDestinoId")} />
+          <input type="hidden" {...register("empresaId")} />
 
           {/* ── Título e Descrição ───────────────────────────────────────── */}
           <div className="space-y-2">
-            <Label className="text-[#3E3E3D] font-medium">Título *</Label>
+            <Label className="ds-label">Título *</Label>
             <Input
               {...register("titulo")}
               placeholder="Descreva brevemente a demanda"
-              className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]"
+              className="rounded-[5px] border-ds-stone text-sm focus-visible:border-ds-ink focus-visible:ring-ds-ink/10"
             />
-            {errors.titulo && <p className="text-red-500 text-sm">{errors.titulo.message}</p>}
+            {errors.titulo && <p className="text-ds-danger text-xs mt-1">{errors.titulo.message}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[#3E3E3D] font-medium">Descrição *</Label>
+            <Label className="ds-label">Descrição *</Label>
             <Textarea
               {...register("descricao")}
               placeholder="Detalhe a demanda com informações relevantes — quanto mais contexto, mais rápida a resolução"
               rows={4}
-              className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]"
+              className="rounded-[5px] border-ds-stone text-sm focus-visible:border-ds-ink focus-visible:ring-ds-ink/10 min-h-[100px]"
             />
-            {errors.descricao && <p className="text-red-500 text-sm">{errors.descricao.message}</p>}
+            {errors.descricao && <p className="text-ds-danger text-xs mt-1">{errors.descricao.message}</p>}
           </div>
 
-          {/* ── Urgência × Impacto → Prioridade ─────────────────────────── */}
-          <div className="space-y-3 p-4 bg-[#F8FAFC] rounded-lg border border-[#DCE2EB]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-[#001F3E]">Urgência × Impacto</p>
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${PRIORIDADE_CONFIG[prioridadeCalculada].color}`}>
+          {/* ── Prioridade (única escala + prazo fixo) ───────────────────── */}
+          <div className="space-y-3 p-4 bg-ds-linen/80 rounded-[9px] border border-ds-pebble">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-ds-info mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-ds-ink">Prioridade *</p>
+                <p className="text-xs text-ds-ash mt-0.5">
+                  Escolha só o nível. O prazo para resposta é calculado automaticamente em horas úteis
+                  ({JORNADA_INICIO_HORA}h–{JORNADA_FIM_HORA}h, segunda a sexta, exceto feriados).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <select
+                {...register("prioridade")}
+                className="w-full sm:max-w-md h-10 rounded-[5px] border border-ds-stone bg-white px-3 text-sm text-ds-charcoal focus:outline-none focus:border-ds-ink focus:ring-2 focus:ring-ds-ink/10"
+              >
+                {PRIORIDADE_GUIA.map((g) => (
+                  <option key={g.prioridade} value={g.prioridade}>
+                    {g.titulo} — até {g.prazoHorasUteis} horas úteis
+                  </option>
+                ))}
+              </select>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold w-fit ${PRIORIDADE_CONFIG[prioridadeSel].color}`}>
                 <PriorIcon className="h-3 w-3" />
-                Prioridade {PRIORIDADE_CONFIG[prioridadeCalculada].label}
+                {PRIORIDADE_CONFIG[prioridadeSel].label}
               </div>
             </div>
-            <p className="text-xs text-[#64789B]">
-              A prioridade é calculada automaticamente com base na urgência e no impacto
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[#3E3E3D] text-sm">Urgência</Label>
-                <select
-                  value={urgenciaDisplay}
-                  onChange={(e) => {
-                    const v = e.target.value as Urgencia;
-                    setUrgenciaDisplay(v);
-                    setValue("urgencia", v);
-                  }}
-                  className="w-full h-9 rounded-lg border border-[#DCE2EB] bg-white px-3 text-sm text-[#3E3E3D] focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40"
-                >
-                  {(Object.keys(URGENCIA_LABELS) as Urgencia[]).map((u) => (
-                    <option key={u} value={u}>{URGENCIA_LABELS[u]}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[#3E3E3D] text-sm">Impacto</Label>
-                <select
-                  value={impactoDisplay}
-                  onChange={(e) => {
-                    const v = e.target.value as Impacto;
-                    setImpactoDisplay(v);
-                    setValue("impacto", v);
-                  }}
-                  className="w-full h-9 rounded-lg border border-[#DCE2EB] bg-white px-3 text-sm text-[#3E3E3D] focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40"
-                >
-                  {(Object.keys(IMPACTO_LABELS) as Impacto[]).map((i) => (
-                    <option key={i} value={i}>{IMPACTO_LABELS[i]}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            {errors.prioridade && (
+              <p className="text-ds-danger text-xs mt-1">{errors.prioridade.message}</p>
+            )}
+
+            <ul className="space-y-2.5 pt-1 border-t border-ds-pebble mt-2">
+              {PRIORIDADE_GUIA.map((g) => (
+                <li key={g.prioridade} className="text-xs text-ds-charcoal leading-snug">
+                  <span className="font-semibold text-ds-ink">{g.titulo}</span>
+                  <span className="text-ds-ash"> ({g.prazoHorasUteis}h úteis) — </span>
+                  {g.quandoUsar}
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* ── Setor Destino ────────────────────────────────────────────── */}
           <div className="space-y-2">
-            <Label className="text-[#3E3E3D] font-medium">Setor Destino *</Label>
-            <Select onValueChange={(v) => {
-              setValue("setorDestinoId", String(v));
-              setValue("empresaId", null);
-              setValue("projetoId", null);
-            }}>
-              <SelectTrigger className="border-[#DCE2EB] focus:ring-[#1AB6D9]">
+            <Label className="ds-label">Setor Destino *</Label>
+            <Select
+              value={setorDestinoId || null}
+              onValueChange={(v) => {
+                const next = v ?? "";
+                setValue("setorDestinoId", next, { shouldValidate: true });
+                setValue("empresaId", "");
+                setValue("projetoId", null);
+              }}
+              items={setorItems}
+            >
+              <SelectTrigger className="w-full rounded-[5px] border-ds-stone focus:ring-ds-ink/10">
                 <SelectValue placeholder="Para qual setor vai esta demanda?" />
               </SelectTrigger>
               <SelectContent>
@@ -289,41 +278,54 @@ export function FormNovoChamado({
                 ))}
               </SelectContent>
             </Select>
-            {errors.setorDestinoId && <p className="text-red-500 text-sm">{errors.setorDestinoId.message}</p>}
+            {errors.setorDestinoId && <p className="text-ds-danger text-xs mt-1">{errors.setorDestinoId.message}</p>}
           </div>
 
-          {/* ── Empresa (com preview de responsável) ─────────────────────── */}
-          {precisaEmpresa && (
+          {/* ── Empresa (responsável vem do vínculo empresa × setor) ─────── */}
+          {setorSelecionado && (
             <div className="space-y-2">
-              <Label className="text-[#3E3E3D] font-medium">
-                Empresa{" "}
-                <span className="text-[#64789B] font-normal text-xs">(opcional — deixe em branco para solicitação interna)</span>
-              </Label>
-              <Select onValueChange={(v) => setValue("empresaId", v === "__none__" ? null : String(v))}>
-                <SelectTrigger className="border-[#DCE2EB] focus:ring-[#1AB6D9]">
-                  <SelectValue placeholder="Selecione a empresa..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Sem empresa (solicitação interna) —</SelectItem>
-                  {empresas.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Preview de responsável */}
-              {empresaId && empresaId !== "__none__" && (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border ${responsavelPreview
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : "bg-yellow-50 border-yellow-200 text-yellow-800"
-                  }`}>
+              <Label className="ds-label">Empresa *</Label>
+              {empresasFiltradas.length === 0 ? (
+                <div className="ds-alert-warn text-[13px] [&>span]:leading-snug">
                   <User2 className="h-4 w-4 flex-shrink-0" />
-                  {responsavelPreview ? (
-                    <span>Será atribuído automaticamente para <strong>{responsavelPreview}</strong></span>
-                  ) : (
-                    <span>Nenhum vínculo cadastrado — chamado ficará em fila aberta para triagem</span>
-                  )}
+                  <span>
+                    Nenhuma empresa possui vínculo com o setor <strong>{setorSelecionado.nome}</strong>.
+                    Cadastre o vínculo antes de abrir o chamado.
+                  </span>
                 </div>
+              ) : (
+                <>
+                  <Select
+                    value={empresaId || null}
+                    onValueChange={(v) =>
+                      setValue("empresaId", v ?? "", { shouldValidate: true })
+                    }
+                    items={empresaItems}
+                  >
+                    <SelectTrigger className="w-full rounded-[5px] border-ds-stone focus:ring-ds-ink/10">
+                      <SelectValue placeholder="Selecione a empresa..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {empresasFiltradas.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.empresaId && (
+                    <p className="text-ds-danger text-xs mt-1">{errors.empresaId.message}</p>
+                  )}
+                  {empresaId && responsavelPreview && (
+                    <div className="ds-alert-ok text-[13px] [&>span]:leading-snug">
+                      <User2 className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        Responsável pelo atendimento: <strong>{responsavelPreview}</strong> (vínculo
+                        empresa × setor)
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -331,66 +333,38 @@ export function FormNovoChamado({
           {/* ── Projeto (Setor IA) ───────────────────────────────────────── */}
           {isSetorIA && projetosFiltrados.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-[#3E3E3D] font-medium">Projeto (opcional)</Label>
-              <Select onValueChange={(v) => setValue("projetoId", String(v))}>
-                <SelectTrigger className="border-[#DCE2EB] focus:ring-[#1AB6D9]">
+              <Label className="ds-label">Projeto (opcional)</Label>
+              <Select
+                value={projetoIdWatch ? String(projetoIdWatch) : "__none__"}
+                onValueChange={(v) =>
+                  setValue("projetoId", v === "__none__" ? null : String(v), {
+                    shouldValidate: true,
+                  })
+                }
+                items={projetoItems}
+              >
+                <SelectTrigger className="w-full rounded-[5px] border-ds-stone focus:ring-ds-ink/10">
                   <SelectValue placeholder="Vincule a um projeto existente..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">— Nenhum —</SelectItem>
                   {projetosFiltrados.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {isSetorIA && (
-                <p className="text-xs text-[#64789B]">
-                  Chamados de IA entram em fila coletiva — qualquer analista pode assumir.
+                <p className="text-xs text-ds-ash">
+                  O responsável é definido pelo vínculo da empresa com o setor IA (projeto continua opcional).
                 </p>
               )}
             </div>
           )}
 
-          {/* ── Persona de cliente ───────────────────────────────────────── */}
-          {(currentUserRole === "GESTOR" || currentUserRole === "SUPERADMIN") && (
-            <div className="space-y-3 p-4 bg-[#F8FAFC] rounded-lg border border-[#DCE2EB]">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="emNomeDeCliente"
-                  {...register("emNomeDeCliente")}
-                  className="rounded border-[#DCE2EB] accent-[#1AB6D9]"
-                />
-                <Label htmlFor="emNomeDeCliente" className="text-[#3E3E3D] font-medium cursor-pointer">
-                  Abrir em nome de cliente externo
-                </Label>
-              </div>
-              <p className="text-xs text-[#64789B]">
-                Registra que você está abrindo este chamado representando um cliente. Gera log de persona.
-              </p>
-
-              {emNomeDeCliente && (
-                <div className="space-y-2">
-                  <Label className="text-[#3E3E3D] font-medium text-sm">Empresa do cliente *</Label>
-                  <Select onValueChange={(v) => setValue("empresaClienteId", String(v))}>
-                    <SelectTrigger className="border-[#DCE2EB] focus:ring-[#1AB6D9]">
-                      <SelectValue placeholder="Selecione a empresa..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {empresas.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Erro ────────────────────────────────────────────────────── */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              {error}
+            <div className="ds-alert-err" role="alert">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -398,14 +372,14 @@ export function FormNovoChamado({
             <Button
               type="submit"
               disabled={loading}
-              className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white font-semibold"
+              className="font-semibold rounded-[5px]"
             >
               {loading ? "Abrindo..." : "Abrir Chamado"}
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="border-[#DCE2EB] text-[#64789B]"
+              className="border-ds-pebble text-ds-ash"
               onClick={() => router.back()}
             >
               Cancelar

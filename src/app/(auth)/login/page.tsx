@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DotGridBackground } from "@/components/ui/DotGridBackground";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -53,18 +54,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#001F3E] flex-col items-center justify-center relative overflow-hidden p-12">
-        {/* Brand pattern background */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cpath d='M10 6C10 6 22 6 22 18C22 24 18 28 10 28C10 28 10 16 10 6Z' fill='%231AB6D9'/%3E%3Cpath d='M10 30C10 30 22 30 22 42C22 48 18 52 10 52C10 52 10 40 10 30Z' fill='%231AB6D9' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E")`,
-            backgroundSize: "60px 60px",
-          }}
-        />
-
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Painel escuro — grade de pontos sutil (caderno escuro) */}
+      <div className="hidden lg:flex lg:w-1/2 ds-bg-dot-grid-ink flex-col items-center justify-center relative overflow-hidden p-12">
         <div className="relative z-10 flex flex-col items-center text-center gap-8">
           <ProjecontLogo variant="dark" size="lg" showTagline />
           <div className="max-w-xs">
@@ -75,7 +67,7 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col gap-3 w-full max-w-xs">
             {[
-              { label: "Contábil", color: "bg-[#1AB6D9]/20 text-[#1AB6D9]" },
+              { label: "Contábil", color: "bg-ds-info/20 text-ds-info" },
               { label: "Fiscal", color: "bg-white/10 text-white/70" },
               { label: "Departamento Pessoal", color: "bg-white/10 text-white/70" },
               { label: "IA", color: "bg-white/10 text-white/70" },
@@ -91,27 +83,26 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center bg-white p-8">
+      {/* Formulário — papel com grade de pontos (notebook) */}
+      <DotGridBackground className="flex flex-1 flex-col items-center justify-center p-6 lg:p-10 min-h-[60vh] lg:min-h-screen">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <ProjecontLogo variant="light" size="md" showTagline />
           </div>
 
-          <Card className="border-0 shadow-none">
-            <CardHeader className="px-0 pb-6">
-              <CardTitle className="text-2xl font-bold text-[#001F3E]">
+          <Card className="border border-ds-pebble/80 rounded-[11px] bg-white/90 shadow-sm backdrop-blur-[2px]">
+            <CardHeader className="px-6 pt-6 pb-2">
+              <CardTitle className="text-[22px] font-medium text-ds-ink tracking-tight">
                 Bem-vindo de volta
               </CardTitle>
-              <CardDescription className="text-[#64789B]">
+              <CardDescription className="text-ds-ash text-[13px]">
                 Faça login para acessar o sistema de chamados
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[#3E3E3D] font-medium">
+            <CardContent className="px-6 pb-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="ds-label">
                     Email
                   </Label>
                   <Input
@@ -119,15 +110,15 @@ export default function LoginPage() {
                     type="email"
                     placeholder="seu@email.com.br"
                     {...register("email")}
-                    className="h-11 border-[#DCE2EB] focus-visible:ring-[#1AB6D9]"
+                    className="h-10 rounded-[5px] border-ds-stone text-sm focus-visible:border-ds-ink focus-visible:ring-ds-ink/10"
                   />
                   {errors.email && (
-                    <p className="text-red-500 text-sm">{errors.email.message}</p>
+                    <p className="text-ds-danger text-xs mt-1">{errors.email.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="senha" className="text-[#3E3E3D] font-medium">
+                <div className="space-y-1.5">
+                  <Label htmlFor="senha" className="ds-label">
                     Senha
                   </Label>
                   <Input
@@ -135,23 +126,24 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••••"
                     {...register("senha")}
-                    className="h-11 border-[#DCE2EB] focus-visible:ring-[#1AB6D9]"
+                    className="h-10 rounded-[5px] border-ds-stone text-sm focus-visible:border-ds-ink focus-visible:ring-ds-ink/10"
                   />
+                  <p className="ds-hint">Mínimo 6 caracteres</p>
                   {errors.senha && (
-                    <p className="text-red-500 text-sm">{errors.senha.message}</p>
+                    <p className="text-ds-danger text-xs mt-1">{errors.senha.message}</p>
                   )}
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {error}
+                  <div className="ds-alert-err" role="alert">
+                    <span>{error}</span>
                   </div>
                 )}
 
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 bg-[#1AB6D9] hover:bg-[#2082BE] text-white font-semibold transition-colors"
+                  className="w-full h-10 font-medium rounded-[5px] mt-2"
                 >
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
@@ -159,11 +151,11 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-[#8E8E8D] mt-8">
+          <p className="text-center text-[11px] text-ds-ash mt-8">
             Projecont Consultoria Contábil · Sistema Interno
           </p>
         </div>
-      </div>
+      </DotGridBackground>
     </div>
   );
 }

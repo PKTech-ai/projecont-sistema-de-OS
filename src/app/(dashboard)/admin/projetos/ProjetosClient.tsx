@@ -9,9 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
+  DsDialogHeader,
+  DsDialogBody,
+  DsDialogActions,
+  DsFormAlert,
+  dsDialogContentClass,
+} from "@/components/ui/ds-dialog";
+import { cn } from "@/lib/utils";
 import { criarProjeto, editarProjeto, ativarDesativarProjeto } from "@/server/actions/projetos";
 import { formatDate } from "@/lib/utils";
 import { Plus, Pencil } from "lucide-react";
@@ -29,7 +35,7 @@ interface Projeto {
 
 // ─── Novo Projeto ─────────────────────────────────────────────────────────────
 
-function NovoProjetoDialog({ setorIA }: { setorIA: Setor }) {
+function NovoProjetoDialog({ setorNovoProjeto }: { setorNovoProjeto: Setor }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
@@ -41,7 +47,7 @@ function NovoProjetoDialog({ setorIA }: { setorIA: Setor }) {
       const result = await criarProjeto({
         nome: String(fd.get("nome")),
         descricao: String(fd.get("descricao") || ""),
-        setorId: setorIA.id,
+        setorId: setorNovoProjeto.id,
       });
       if ("error" in result) { setError(result.error); return; }
       setOpen(false); setError("");
@@ -51,38 +57,55 @@ function NovoProjetoDialog({ setorIA }: { setorIA: Setor }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white gap-2 shadow-sm">
+        <Button className="bg-ds-info hover:bg-ds-ink-dark text-white gap-2 shadow-sm">
           <Plus className="h-4 w-4" /> Novo Projeto
         </Button>
       } />
-      <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className="bg-[#F8FAFC] px-6 py-5 border-b border-[#DCE2EB]">
-          <DialogTitle className="text-xl font-bold text-[#001F3E] flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#1AB6D9]/10 flex items-center justify-center">
-              <Plus className="h-4 w-4 text-[#1AB6D9]" />
+      <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
+        <DsDialogHeader
+          icon={Plus}
+          title="Novo projeto"
+          description={
+            <>
+              Setor <strong className="text-ds-charcoal">{setorNovoProjeto.nome}</strong> — projetos IA podem ser vinculados na abertura do chamado.
+            </>
+          }
+        />
+        <form onSubmit={handleSubmit}>
+          <DsDialogBody>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="ds-label">Nome do projeto *</Label>
+                <Input
+                  name="nome"
+                  required
+                  minLength={2}
+                  placeholder="Ex.: Automação de Folha v2"
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="ds-label">
+                  Descrição <span className="font-normal text-ds-ash">(opcional)</span>
+                </Label>
+                <Textarea
+                  name="descricao"
+                  rows={3}
+                  placeholder="Objetivo do projeto, escopo ou links internos."
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
             </div>
-            Criar Projeto IA
-          </DialogTitle>
-          <p className="text-sm text-[#64789B] mt-1.5 ml-10">
-            Cadastre um novo projeto para vincular chamados de Inteligência Artificial.
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-[#3E3E3D] font-medium">Nome do projeto *</Label>
-            <Input name="nome" required minLength={2} placeholder="Ex: Automação de Folha v2" className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[#3E3E3D] font-medium">Descrição <span className="text-[#64789B] font-normal text-xs">(opcional)</span></Label>
-            <Textarea name="descricao" rows={3} placeholder="Descreva brevemente o objetivo do projeto..." className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]" />
-          </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-md mt-2">{error}</p>}
-          <div className="flex justify-end gap-3 pt-5 border-t border-[#DCE2EB] mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-[#DCE2EB] text-[#64789B]">Cancelar</Button>
-            <Button type="submit" disabled={pending} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
-              {pending ? "Criando..." : "Criar Projeto"}
+            {error ? <DsFormAlert>{error}</DsFormAlert> : null}
+          </DsDialogBody>
+          <DsDialogActions>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-ds-pebble">
+              Cancelar
             </Button>
-          </div>
+            <Button type="submit" disabled={pending} className="bg-ds-ink text-ds-paper hover:bg-ds-ink-dark">
+              {pending ? "Criando..." : "Criar projeto"}
+            </Button>
+          </DsDialogActions>
         </form>
       </DialogContent>
     </Dialog>
@@ -112,38 +135,53 @@ function EditarProjetoDialog({ projeto }: { projeto: Projeto }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[#64789B] hover:text-[#001F3E] hover:bg-[#F8FAFC]" title="Editar">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-ds-ash hover:text-ds-ink hover:bg-ds-paper" title="Editar">
           <Pencil className="h-4 w-4" />
         </Button>
       } />
-      <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className="bg-[#F8FAFC] px-6 py-5 border-b border-[#DCE2EB]">
-          <DialogTitle className="text-xl font-bold text-[#001F3E] flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#2082BE]/10 flex items-center justify-center">
-              <Pencil className="h-4 w-4 text-[#2082BE]" />
+      <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
+        <DsDialogHeader
+          icon={Pencil}
+          title="Editar projeto"
+          description={
+            <>
+              Projeto <strong className="text-ds-charcoal">{projeto.nome}</strong> ({projeto.setor.nome}).
+            </>
+          }
+        />
+        <form onSubmit={handleSubmit}>
+          <DsDialogBody>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="ds-label">Nome *</Label>
+                <Input
+                  name="nome"
+                  defaultValue={projeto.nome}
+                  required
+                  minLength={2}
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="ds-label">Descrição</Label>
+                <Textarea
+                  name="descricao"
+                  defaultValue={projeto.descricao ?? ""}
+                  rows={3}
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
             </div>
-            Editar Projeto
-          </DialogTitle>
-          <p className="text-sm text-[#64789B] mt-1.5 ml-10">
-            Atualize as informações do projeto <strong className="text-[#3E3E3D]">{projeto.nome}</strong>.
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-[#3E3E3D] font-medium">Nome *</Label>
-            <Input name="nome" defaultValue={projeto.nome} required minLength={2} className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[#3E3E3D] font-medium">Descrição</Label>
-            <Textarea name="descricao" defaultValue={projeto.descricao ?? ""} rows={3} className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]" />
-          </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-md mt-2">{error}</p>}
-          <div className="flex justify-end gap-3 pt-5 border-t border-[#DCE2EB] mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-[#DCE2EB] text-[#64789B]">Cancelar</Button>
-            <Button type="submit" disabled={pending} className="bg-[#2082BE] hover:bg-[#001F3E] text-white">
-              {pending ? "Salvando..." : "Salvar Alterações"}
+            {error ? <DsFormAlert>{error}</DsFormAlert> : null}
+          </DsDialogBody>
+          <DsDialogActions>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-ds-pebble">
+              Cancelar
             </Button>
-          </div>
+            <Button type="submit" disabled={pending} className="bg-ds-ink text-ds-paper hover:bg-ds-ink-dark">
+              {pending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DsDialogActions>
         </form>
       </DialogContent>
     </Dialog>
@@ -173,47 +211,53 @@ function ToggleAtivoButton({ projeto }: { projeto: Projeto }) {
 
 export function ProjetosClient({
   projetos,
-  setorIA,
+  setorContexto,
+  setorNovoProjeto,
+  modo,
 }: {
   projetos: Projeto[];
-  setorIA: Setor;
+  setorContexto: Setor;
+  setorNovoProjeto: Setor;
+  modo: "superadmin" | "setor";
 }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#001F3E]">Projetos — Setor IA</h2>
-          <p className="text-[#64789B] text-sm mt-1">{projetos.length} projetos cadastrados</p>
+          <h2 className="text-2xl font-bold text-ds-ink">
+            {modo === "superadmin" ? "Projetos — todos os setores" : `Projetos — ${setorContexto.nome}`}
+          </h2>
+          <p className="text-ds-ash text-sm mt-1">{projetos.length} projeto(s)</p>
         </div>
-        <NovoProjetoDialog setorIA={setorIA} />
+        <NovoProjetoDialog setorNovoProjeto={setorNovoProjeto} />
       </div>
 
-      <div className="bg-white rounded-xl border border-[#DCE2EB] overflow-hidden">
+      <div className="bg-white rounded-xl border border-ds-pebble overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#DCE2EB]/50 hover:bg-[#DCE2EB]/50">
-              <TableHead className="text-[#001F3E] font-semibold">Nome</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Setor</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Descrição</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Status</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold">Criado em</TableHead>
-              <TableHead className="text-[#001F3E] font-semibold w-28">Ações</TableHead>
+            <TableRow className="bg-ds-pebble/50 hover:bg-ds-pebble/50">
+              <TableHead className="text-ds-ink font-semibold">Nome</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Setor</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Descrição</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Status</TableHead>
+              <TableHead className="text-ds-ink font-semibold">Criado em</TableHead>
+              <TableHead className="text-ds-ink font-semibold w-28">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {projetos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-[#64789B]">
+                <TableCell colSpan={6} className="text-center py-10 text-ds-ash">
                   Nenhum projeto cadastrado ainda.
                 </TableCell>
               </TableRow>
             ) : projetos.map((p, i) => (
-              <TableRow key={p.id} className={i % 2 === 1 ? "bg-[#F8FAFC]" : "bg-white"}>
-                <TableCell className="font-medium text-[#3E3E3D]">{p.nome}</TableCell>
+              <TableRow key={p.id} className={i % 2 === 1 ? "bg-ds-paper" : "bg-white"}>
+                <TableCell className="font-medium text-ds-charcoal">{p.nome}</TableCell>
                 <TableCell>
-                  <Badge className="bg-[#DCE2EB] text-[#001F3E] border-0">{p.setor.nome}</Badge>
+                  <Badge className="bg-ds-pebble text-ds-ink border-0">{p.setor.nome}</Badge>
                 </TableCell>
-                <TableCell className="text-[#64789B] text-sm max-w-xs">
+                <TableCell className="text-ds-ash text-sm max-w-xs">
                   <span className="line-clamp-1">{p.descricao ?? "—"}</span>
                 </TableCell>
                 <TableCell>
@@ -223,7 +267,7 @@ export function ProjetosClient({
                     {p.ativo ? "Ativo" : "Inativo"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-[#64789B] text-sm">{formatDate(p.criadoEm)}</TableCell>
+                <TableCell className="text-ds-ash text-sm">{formatDate(p.criadoEm)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <EditarProjetoDialog projeto={p} />

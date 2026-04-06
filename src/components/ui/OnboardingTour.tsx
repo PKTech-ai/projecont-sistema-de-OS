@@ -129,16 +129,16 @@ function getArrowStyle(position: Step["position"]): React.CSSProperties {
   switch (position) {
     case "bottom":
       return { ...base, top: -8, left: "50%", transform: "translateX(-50%)",
-        borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderBottom: "8px solid #001F3E" };
+        borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderBottom: "8px solid #1A1916" };
     case "top":
       return { ...base, bottom: -8, left: "50%", transform: "translateX(-50%)",
-        borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid #001F3E" };
+        borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid #1A1916" };
     case "right":
       return { ...base, left: -8, top: "50%", transform: "translateY(-50%)",
-        borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderRight: "8px solid #001F3E" };
+        borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderRight: "8px solid #1A1916" };
     case "left":
       return { ...base, right: -8, top: "50%", transform: "translateY(-50%)",
-        borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "8px solid #001F3E" };
+        borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "8px solid #1A1916" };
   }
 }
 
@@ -224,7 +224,7 @@ export function OnboardingTour({ role }: { role: Role }) {
       {/* Spotlight: recorte sobre o elemento */}
       {targetRect && (
         <div
-          className="fixed z-[9991] rounded-lg ring-4 ring-[#1AB6D9] ring-offset-0 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] pointer-events-none transition-all duration-300"
+          className="fixed z-[9991] rounded-lg ring-4 ring-ds-info ring-offset-0 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] pointer-events-none transition-all duration-300"
           style={{
             top:    targetRect.top    - 6,
             left:   targetRect.left   - 6,
@@ -237,7 +237,7 @@ export function OnboardingTour({ role }: { role: Role }) {
       {/* Tooltip */}
       {targetRect && (
         <div
-          className="z-[9999] bg-[#001F3E] text-white rounded-xl shadow-2xl p-5"
+          className="z-[9999] bg-ds-ink text-white rounded-xl shadow-2xl p-5"
           style={getTooltipStyle(targetRect, currentStep.position)}
         >
           {/* Seta */}
@@ -277,7 +277,7 @@ export function OnboardingTour({ role }: { role: Role }) {
               )}
               <button
                 onClick={next}
-                className="flex items-center gap-1 bg-[#1AB6D9] hover:bg-[#2082BE] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1 bg-ds-info hover:bg-ds-ink-dark text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 {step === steps.length - 1 ? "Concluir" : "Próximo"}
                 {step < steps.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
@@ -293,7 +293,7 @@ export function OnboardingTour({ role }: { role: Role }) {
                 onClick={() => setStep(i)}
                 className={cn(
                   "h-1.5 rounded-full transition-all",
-                  i === step ? "w-5 bg-[#1AB6D9]" : "w-1.5 bg-white/20 hover:bg-white/40"
+                  i === step ? "w-5 bg-ds-info" : "w-1.5 bg-white/20 hover:bg-white/40"
                 )}
               />
             ))}
@@ -303,10 +303,10 @@ export function OnboardingTour({ role }: { role: Role }) {
 
       {/* Fallback: se o elemento não for encontrado */}
       {!targetRect && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] bg-[#001F3E] text-white rounded-xl shadow-2xl p-6 w-80">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] bg-ds-ink text-white rounded-xl shadow-2xl p-6 w-80">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-[#1AB6D9]" />
+              <Sparkles className="h-5 w-5 text-ds-info" />
               <h3 className="font-bold">{currentStep.title}</h3>
             </div>
             <button onClick={close} className="text-white/50 hover:text-white">
@@ -318,7 +318,7 @@ export function OnboardingTour({ role }: { role: Role }) {
             <span className="text-xs text-white/40">{step + 1} / {steps.length}</span>
             <button
               onClick={next}
-              className="flex items-center gap-1 bg-[#1AB6D9] hover:bg-[#2082BE] text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+              className="flex items-center gap-1 bg-ds-info hover:bg-ds-ink-dark text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
             >
               {step === steps.length - 1 ? "Concluir" : "Próximo"}
               {step < steps.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
@@ -337,7 +337,7 @@ export function TourRestartButton() {
     <button
       data-tour="sidebar-footer"
       onClick={() => window.dispatchEvent(new Event("projecont:start-tour"))}
-      className="flex items-center gap-2 text-xs text-white/30 hover:text-[#1AB6D9] transition-colors w-full"
+      className="flex items-center gap-2 text-xs text-white/30 hover:text-ds-info transition-colors w-full"
       title="Rever guia de uso"
     >
       <Sparkles className="h-3 w-3 shrink-0" />

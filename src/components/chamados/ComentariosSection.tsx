@@ -50,15 +50,15 @@ export function ComentariosSection({
   const canComment = currentRole !== "TV";
 
   return (
-    <div className="bg-white rounded-xl border border-[#DCE2EB] p-5">
-      <h3 className="font-semibold text-[#001F3E] mb-4 flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-[#1AB6D9]" />
+    <div className="bg-white rounded-xl border border-ds-pebble p-5">
+      <h3 className="font-semibold text-ds-ink mb-4 flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-ds-info" />
         Comentários ({comentarios.length})
       </h3>
 
       <div className="space-y-4 mb-5">
         {comentarios.length === 0 ? (
-          <p className="text-[#64789B] text-sm text-center py-6">
+          <p className="text-ds-ash text-sm text-center py-6">
             Nenhum comentário ainda.
           </p>
         ) : (
@@ -76,23 +76,23 @@ export function ComentariosSection({
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarFallback
                     className={`text-xs font-semibold ${
-                      isOwn ? "bg-[#001F3E] text-white" : "bg-[#DCE2EB] text-[#64789B]"
+                      isOwn ? "bg-ds-ink text-white" : "bg-ds-pebble text-ds-ash"
                     }`}
                   >
                     {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="bg-[#F8FAFC] rounded-lg px-4 py-3 border border-[#DCE2EB]">
+                  <div className="bg-ds-paper rounded-lg px-4 py-3 border border-ds-pebble">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-[#001F3E]">
+                      <span className="text-sm font-medium text-ds-ink">
                         {c.autor.nome}
                       </span>
-                      <span className="text-xs text-[#8E8E8D]">
+                      <span className="text-xs text-brand-gray-mid">
                         {formatDateTime(c.criadoEm)}
                       </span>
                     </div>
-                    <p className="text-sm text-[#3E3E3D] whitespace-pre-wrap">{c.conteudo}</p>
+                    <p className="text-sm text-ds-charcoal whitespace-pre-wrap">{c.conteudo}</p>
                   </div>
                 </div>
               </div>
@@ -108,13 +108,13 @@ export function ComentariosSection({
             onChange={(e) => setConteudo(e.target.value)}
             placeholder="Escreva um comentário..."
             rows={3}
-            className="border-[#DCE2EB] focus-visible:ring-[#1AB6D9]"
+            className="border-ds-pebble focus-visible:ring-ds-info"
           />
           {error && <p className="text-red-500 text-xs">{error}</p>}
           <div className="flex justify-end">
             <Button
               disabled={loading || !conteudo.trim()}
-              className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white"
+              className="bg-ds-info hover:bg-ds-ink-dark text-white"
               onClick={handleSubmit}
             >
               <Send className="h-4 w-4 mr-2" />

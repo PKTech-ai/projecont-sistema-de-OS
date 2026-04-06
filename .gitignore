@@ -20,6 +20,9 @@
 # production
 /build
 
+# uploads locais (anexos de chamados)
+/uploads
+
 # misc
 .DS_Store
 *.pem

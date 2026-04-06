@@ -61,12 +61,12 @@ export function BotaoEditarRole({ usuarioId, roleAtual, setorIdAtual, setores }:
     setOpen(false);
   }
 
-  const selectCls = "w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm text-[#3E3E3D] focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40";
-  const labelCls = "block text-xs font-medium text-[#64789B] mb-1";
+  const selectCls = "w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-info/40";
+  const labelCls = "block text-xs font-medium text-ds-ash mb-1";
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="border-[#DCE2EB] text-[#64789B] text-xs">
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="border-ds-pebble text-ds-ash text-xs">
         <Pencil className="h-3 w-3 mr-1" />
         Editar
       </Button>
@@ -74,7 +74,7 @@ export function BotaoEditarRole({ usuarioId, roleAtual, setorIdAtual, setores }:
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-[#001F3E]">Alterar Role / Setor</DialogTitle>
+            <DialogTitle className="text-ds-ink">Alterar Role / Setor</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
@@ -82,6 +82,7 @@ export function BotaoEditarRole({ usuarioId, roleAtual, setorIdAtual, setores }:
               <select value={role} onChange={(e) => setRole(e.target.value as Role)} className={selectCls}>
                 <option value="ANALISTA">Analista</option>
                 <option value="GESTOR">Gestor</option>
+                <option value="SAC">SAC</option>
                 <option value="SUPERADMIN">Super Admin</option>
                 <option value="TV">TV (Display)</option>
               </select>
@@ -96,10 +97,10 @@ export function BotaoEditarRole({ usuarioId, roleAtual, setorIdAtual, setores }:
             </div>
             {error && <p className="text-xs text-red-600">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="border-[#DCE2EB] text-[#64789B]">
+              <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="border-ds-pebble text-ds-ash">
                 Cancelar
               </Button>
-              <Button size="sm" disabled={loading} onClick={salvar} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+              <Button size="sm" disabled={loading} onClick={salvar} className="bg-ds-info hover:bg-ds-ink-dark text-white">
                 {loading ? "Salvando..." : "Salvar"}
               </Button>
             </div>

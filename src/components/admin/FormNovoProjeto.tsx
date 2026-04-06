@@ -36,27 +36,27 @@ export function FormNovoProjeto({ setorIA }: Props) {
     setOpen(false);
   }
 
-  const inputCls = "w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40 focus:border-[#1AB6D9]";
+  const inputCls = "w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ds-info/40 focus:border-ds-info";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+        <Button className="bg-ds-info hover:bg-ds-ink-dark text-white">
           <FolderPlus className="h-4 w-4 mr-2" />
           Novo Projeto
         </Button>
       } />
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-[#001F3E]">Novo Projeto — Setor IA</DialogTitle>
+          <DialogTitle className="text-ds-ink">Novo Projeto — Setor IA</DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 mt-2">
           <div>
-            <label className="block text-xs font-medium text-[#64789B] mb-1">Nome do projeto</label>
+            <label className="block text-xs font-medium text-ds-ash mb-1">Nome do projeto</label>
             <input value={nome} onChange={(e) => setNome(e.target.value)} className={inputCls} placeholder="Ex: Automação Financeira Alpha" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#64789B] mb-1">Descrição (opcional)</label>
+            <label className="block text-xs font-medium text-ds-ash mb-1">Descrição (opcional)</label>
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
@@ -67,8 +67,8 @@ export function FormNovoProjeto({ setorIA }: Props) {
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-[#DCE2EB] text-[#64789B]">Cancelar</Button>
-            <Button type="submit" disabled={loading} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-ds-pebble text-ds-ash">Cancelar</Button>
+            <Button type="submit" disabled={loading} className="bg-ds-info hover:bg-ds-ink-dark text-white">
               {loading ? "Criando..." : "Criar Projeto"}
             </Button>
           </div>
@@ -97,31 +97,31 @@ export function BotaoEditarProjeto({ projetoId, nomeAtual, descricaoAtual }: Edi
     setOpen(false);
   }
 
-  const inputCls = "w-full border border-[#DCE2EB] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1AB6D9]/40";
+  const inputCls = "w-full border border-ds-pebble rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ds-info/40";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button variant="outline" size="sm" className="border-[#DCE2EB] text-[#64789B] text-xs">
+        <Button variant="outline" size="sm" className="border-ds-pebble text-ds-ash text-xs">
           <Pencil className="h-3 w-3 mr-1" />Editar
         </Button>
       } />
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-[#001F3E]">Editar Projeto</DialogTitle>
+          <DialogTitle className="text-ds-ink">Editar Projeto</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
-            <label className="block text-xs font-medium text-[#64789B] mb-1">Nome</label>
+            <label className="block text-xs font-medium text-ds-ash mb-1">Nome</label>
             <input value={nome} onChange={(e) => setNome(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#64789B] mb-1">Descrição</label>
+            <label className="block text-xs font-medium text-ds-ash mb-1">Descrição</label>
             <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} className={inputCls} />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="border-[#DCE2EB] text-[#64789B]">Cancelar</Button>
-            <Button size="sm" disabled={loading} onClick={salvar} className="bg-[#1AB6D9] hover:bg-[#2082BE] text-white">
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} className="border-ds-pebble text-ds-ash">Cancelar</Button>
+            <Button size="sm" disabled={loading} onClick={salvar} className="bg-ds-info hover:bg-ds-ink-dark text-white">
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>

@@ -10,12 +10,13 @@ datasource db {
 enum Role {
   ANALISTA
   GESTOR
+  SAC
   SUPERADMIN
   TV
 }
 
 enum StatusChamado {
-  ABERTO
+  NAO_INICIADO
   EM_ANDAMENTO
   AGUARDANDO_VALIDACAO
   CONCLUIDO
@@ -35,29 +36,21 @@ enum TipoChamado {
   SOLICITACAO  // pedido de serviço / demanda nova
 }
 
-// GLPI-inspired: urgência e impacto geram prioridade automaticamente
-enum Urgencia {
-  MUITO_BAIXA
-  BAIXA
-  MEDIA
-  ALTA
-  MUITO_ALTA
-}
-
-enum Impacto {
-  MUITO_BAIXO
-  BAIXO
-  MEDIO
-  ALTO
-  MUITO_ALTO
-}
-
 enum TipoSetor {
   CONTABIL
   FISCAL
   DP
   IA
   CLIENTES
+  /** Contratos, atas, alterações societárias — costuma ser um único responsável para todas as empresas */
+  SOCIETARIO
+}
+
+/** Classificação do comentário no chat (filtros futuros / base de conhecimento) */
+enum TipoMensagemChat {
+  NORMAL
+  ACAO_SOLICITANTE
+  RESOLUCAO
 }
 
 model Usuario {
@@ -71,6 +64,10 @@ model Usuario {
   setor     Setor    @relation(fields: [setorId], references: [id])
   criadoEm  DateTime @default(now())
 
+  telefone    String?
+  cargo       String?
+  observacoes String? @db.Text
+
   chamadosAbertos     Chamado[]       @relation("Solicitante")
   chamadosResponsavel Chamado[]       @relation("Responsavel")
   comentarios         Comentario[]
@@ -78,6 +75,7 @@ model Usuario {
   logPersonas         LogPersona[]
   historicoStatus     HistoricoStatus[]
   vinculos            VinculoEmpresa[]
+  anexosChamado       AnexoChamado[]
 }
 
 model Setor {
@@ -94,6 +92,22 @@ model Empresa {
   nome      String
   ativo     Boolean          @default(true)
   criadoEm  DateTime         @default(now())
+
+  /** CNPJ apenas dígitos (14) — único quando informado */
+  cnpj         String?  @unique
+  razaoSocial  String?
+  nomeFantasia String?
+  emailContato String?
+  telefone     String?
+  cep          String?
+  logradouro   String?
+  numero       String?
+  complemento  String?
+  bairro       String?
+  cidade       String?
+  uf           String?
+  observacoes  String? @db.Text
+
   vinculos  VinculoEmpresa[]
   chamados  Chamado[]
   logPersonas LogPersona[]
@@ -125,16 +139,13 @@ model Chamado {
   id              String        @id @default(cuid())
   titulo          String
   descricao       String
-  status          StatusChamado @default(ABERTO)
+  status          StatusChamado @default(NAO_INICIADO)
   prioridade      Prioridade    @default(MEDIA)
   autoFechado     Boolean       @default(false)
   emNomeDeCliente Boolean       @default(false)
 
-  // GLPI-inspired fields
-  tipo            TipoChamado   @default(SOLICITACAO)
-  urgencia        Urgencia      @default(MEDIA)
-  impacto         Impacto       @default(MEDIO)
-  solucao         String?       // preenchido pelo analista ao entregar
+  tipo    TipoChamado @default(SOLICITACAO)
+  solucao String? // preenchido pelo analista ao entregar
 
   // Setor de destino — para roteamento e regras de UI
   setorDestinoId  String?
@@ -148,11 +159,16 @@ model Chamado {
 
   solicitanteId String
   solicitante   Usuario  @relation("Solicitante", fields: [solicitanteId], references: [id])
-  responsavelId String?
-  responsavel   Usuario? @relation("Responsavel", fields: [responsavelId], references: [id])
+  responsavelId String
+  responsavel   Usuario  @relation("Responsavel", fields: [responsavelId], references: [id])
 
-  empresaId String?
-  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+
+  /** Entrega para validação dentro do prazo (previsão na abertura) */
+  entregaNoPrazo    Boolean?
+  /** Conclusão pelo solicitante dentro do prazo */
+  conclusaoNoPrazo  Boolean?
   projetoId String?
   projeto   Projeto? @relation(fields: [projetoId], references: [id])
 
@@ -160,6 +176,7 @@ model Chamado {
   notificacoes    Notificacao[]
   historicoStatus HistoricoStatus[]
   logPersonas     LogPersona[]
+  anexos          AnexoChamado[]
 
   @@index([status])
   @@index([responsavelId])
@@ -167,14 +184,31 @@ model Chamado {
   @@index([empresaId])
 }
 
+model AnexoChamado {
+  id             String   @id @default(cuid())
+  nomeOriginal   String
+  mimeType       String?
+  tamanhoBytes   Int
+  /** Caminho relativo à pasta uploads/chamados (ex.: chamadoId/uuid-nome.pdf) */
+  storageKey     String   @unique
+  criadoEm       DateTime @default(now())
+  chamadoId      String
+  chamado        Chamado  @relation(fields: [chamadoId], references: [id], onDelete: Cascade)
+  autorId        String
+  autor          Usuario  @relation(fields: [autorId], references: [id])
+
+  @@index([chamadoId])
+}
+
 model Comentario {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   conteudo  String
-  criadoEm  DateTime @default(now())
+  tipo      TipoMensagemChat @default(NORMAL)
+  criadoEm  DateTime         @default(now())
   chamadoId String
-  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
+  chamado   Chamado          @relation(fields: [chamadoId], references: [id])
   autorId   String
-  autor     Usuario  @relation(fields: [autorId], references: [id])
+  autor     Usuario          @relation(fields: [autorId], references: [id])
 }
 
 model Notificacao {
@@ -198,6 +232,8 @@ model HistoricoStatus {
   chamado       Chamado       @relation(fields: [chamadoId], references: [id])
   atorId        String
   ator          Usuario       @relation(fields: [atorId], references: [id])
+
+  @@index([chamadoId])
 }
 
 model LogPersona {

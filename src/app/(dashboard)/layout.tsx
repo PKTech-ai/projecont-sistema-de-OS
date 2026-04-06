@@ -26,12 +26,12 @@ export default async function DashboardLayout({
   const notificacoes = notificacoesRaw.map(n => ({
     ...n,
     mensagem: n.tipo === "CHAMADO_ABERTO" ? "Novo chamado para seu setor" :
-              n.tipo === "CHAMADO_ASSUMIDO" ? "Chamado assumido" :
-              n.tipo === "ENTREGUE" ? "Chamado entregue para validação" :
-              n.tipo === "CONCLUIDO" ? "Chamado concluído" :
-              n.tipo === "REPROVADO" ? "Chamado reprovado" :
+      n.tipo === "CHAMADO_ASSUMIDO" ? "Chamado assumido" :
+        n.tipo === "ENTREGUE" ? "Chamado entregue para validação" :
+          n.tipo === "CONCLUIDO" ? "Chamado concluído" :
+            n.tipo === "REPROVADO" ? "Chamado reprovado" :
               n.tipo === "TRANSFERIDO" ? "Chamado transferido para você" :
-              n.tipo === "CANCELADO" ? "Chamado cancelado" : "Nova notificação",
+                n.tipo === "CANCELADO" ? "Chamado cancelado" : "Nova notificação",
   }));
 
   const unreadCount = notificacoes.filter((n) => !n.lida).length;
@@ -41,7 +41,7 @@ export default async function DashboardLayout({
   });
 
   return (
-    <div className="flex h-[100dvh] bg-[#F8FAFC] overflow-hidden">
+    <div className="flex h-[100dvh] bg-ds-paper overflow-hidden">
       <Sidebar role={session.user.role} setorTipo={session.user.setorTipo} />
       <div className="flex-1 flex flex-col min-w-0 h-[100dvh]">
         <Header
@@ -52,7 +52,9 @@ export default async function DashboardLayout({
           unreadCount={unreadCount}
           notificacoes={notificacoes}
         />
-        <main className="flex-1 p-6 max-h-[calc(100dvh-73px)] overflow-y-auto">{children}</main>
+        <main className="ds-bg-dot-grid flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden p-6">
+          {children}
+        </main>
       </div>
       <OnboardingTour role={session.user.role} />
     </div>

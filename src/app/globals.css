@@ -2,23 +2,51 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Design System v2 — Ink & Paper (design_system_v2_complete.html) */
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Projecont Brand Tokens */
-  --color-brand-navy: #001F3E;
-  --color-brand-cyan: #1AB6D9;
-  --color-brand-blue: #2082BE;
-  --color-brand-slate: #64789B;
-  --color-brand-charcoal: #3E3E3D;
-  --color-brand-gray-mid: #8E8E8D;
-  --color-brand-gray-light: #A8A8A7;
-  --color-brand-ice: #DCE2EB;
+  /* DS v2 — paleta principal */
+  --color-ds-ink: #1a1916;
+  --color-ds-ink-dark: #2a2926;
+  --color-ds-charcoal: #444440;
+  --color-ds-graphite: #666660;
+  --color-ds-ash: #888880;
+  --color-ds-stone: #c0c0b8;
+  --color-ds-pebble: #ddddd5;
+  --color-ds-linen: #eeeee8;
+  --color-ds-cream: #f0efe8;
+  --color-ds-paper: #f7f6f2;
+
+  /* DS v2 — semânticas */
+  --color-ds-success: #639922;
+  --color-ds-success-fg: #3b6d11;
+  --color-ds-success-bg: #eaf3de;
+  --color-ds-warning: #ba7517;
+  --color-ds-warning-fg: #854f0b;
+  --color-ds-warning-bg: #faeeda;
+  --color-ds-danger: #e24b4a;
+  --color-ds-danger-fg: #a32d2d;
+  --color-ds-danger-bg: #fcebeb;
+  --color-ds-info: #378add;
+  --color-ds-info-fg: #185fa5;
+  --color-ds-info-bg: #e6f1fb;
+
+  /* Compat: código legado “brand” → mesmos tons DS v2 */
+  --color-brand-navy: var(--color-ds-ink);
+  --color-brand-cyan: var(--color-ds-info);
+  --color-brand-blue: var(--color-ds-ink-dark);
+  --color-brand-slate: var(--color-ds-ash);
+  --color-brand-charcoal: var(--color-ds-charcoal);
+  --color-brand-gray-mid: #8e8e8d;
+  --color-brand-gray-light: #a8a8a7;
+  --color-brand-ice: var(--color-ds-pebble);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -59,72 +87,137 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f7f6f2;
+  --foreground: #1a1916;
+  --card: #ffffff;
+  --card-foreground: #1a1916;
+  --popover: #ffffff;
+  --popover-foreground: #1a1916;
+  --primary: #1a1916;
+  --primary-foreground: #f7f6f2;
+  --secondary: #f0efe8;
+  --secondary-foreground: #1a1916;
+  --muted: #eeeee8;
+  --muted-foreground: #666660;
+  --accent: #f0efe8;
+  --accent-foreground: #1a1916;
+  --destructive: #e24b4a;
+  --border: #ddddd5;
+  --input: #c0c0b8;
+  --ring: #1a1916;
+  --chart-1: #378add;
+  --chart-2: #639922;
+  --chart-3: #ba7517;
+  --chart-4: #888880;
+  --chart-5: #2a2926;
+  --radius: 0.5rem;
+  --sidebar: #1a1916;
+  --sidebar-foreground: #f7f6f2;
+  --sidebar-primary: #f7f6f2;
+  --sidebar-primary-foreground: #1a1916;
+  --sidebar-accent: #2a2926;
+  --sidebar-accent-foreground: #f7f6f2;
+  --sidebar-border: #2a2926;
+  --sidebar-ring: #888880;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #1a1916;
+  --foreground: #f7f6f2;
+  --card: #2a2926;
+  --card-foreground: #f7f6f2;
+  --popover: #2a2926;
+  --popover-foreground: #f7f6f2;
+  --primary: #f7f6f2;
+  --primary-foreground: #1a1916;
+  --secondary: #2a2926;
+  --secondary-foreground: #f7f6f2;
+  --muted: #2a2926;
+  --muted-foreground: #888880;
+  --accent: #2a2926;
+  --accent-foreground: #f7f6f2;
+  --destructive: #e24b4a;
+  --border: #444440;
+  --input: #444440;
+  --ring: #888880;
+  --sidebar: #1a1916;
+  --sidebar-foreground: #f7f6f2;
+  --sidebar-primary: #f7f6f2;
+  --sidebar-primary-foreground: #1a1916;
+  --sidebar-accent: #2a2926;
+  --sidebar-accent-foreground: #f7f6f2;
+  --sidebar-border: #2a2926;
+  --sidebar-ring: #888880;
+}
+
+/* ─── Dot grid — grade de pontos (notebook / caderno), clean ─── */
+.ds-bg-dot-grid {
+  background-color: #f7f6f2;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(26, 25, 22, 0.07) 0.75px,
+    transparent 0.85px
+  );
+  background-size: 20px 20px;
+}
+
+.ds-bg-dot-grid-ink {
+  background-color: #1a1916;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(247, 246, 242, 0.08) 0.75px,
+    transparent 0.85px
+  );
+  background-size: 22px 22px;
+}
+
+/* Formulários DS v2 — CSS direto (evita @apply + utilitários ds-* no Tailwind v4) */
+.ds-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-ds-charcoal);
+}
+
+.ds-hint {
+  font-size: 10px;
+  color: var(--color-ds-ash);
+}
+
+/* Feedback — alertas inline (variantes DS) */
+.ds-alert-ok,
+.ds-alert-warn,
+.ds-alert-err,
+.ds-alert-info {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  border-radius: 7px;
+  border-left-width: 3px;
+  border-left-style: solid;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  line-height: 1.625;
+}
+
+.ds-alert-ok {
+  border-left-color: var(--color-ds-success);
+  background-color: var(--color-ds-success-bg);
+  color: var(--color-ds-success-fg);
+}
+.ds-alert-warn {
+  border-left-color: var(--color-ds-warning);
+  background-color: var(--color-ds-warning-bg);
+  color: var(--color-ds-warning-fg);
+}
+.ds-alert-err {
+  border-left-color: var(--color-ds-danger);
+  background-color: var(--color-ds-danger-bg);
+  color: var(--color-ds-danger-fg);
+}
+.ds-alert-info {
+  border-left-color: var(--color-ds-info);
+  background-color: var(--color-ds-info-bg);
+  color: var(--color-ds-info-fg);
 }
 
 @layer base {
@@ -132,9 +225,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
   html {
-    @apply font-sans;
+    @apply font-sans overflow-x-hidden;
   }
 }
