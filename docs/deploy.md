@@ -6,6 +6,19 @@ Este documento descreve os passos necessários para realizar o deploy do Sistema
 
 **Importante:** `prisma migrate deploy` aplica-se à **base de dados do OS** (`DATABASE_URL` do OS). Não confundir com a base do Contábil Pro; **nunca** usar `migrate reset` em produção sem backup e plano explícito.
 
+## Docker (build da versão atual do Git)
+
+O repositório inclui um `Dockerfile` na raiz. Assim evitas depender de imagens antigas em cache na VPS: cada deploy é **build a partir do commit** que escolheres.
+
+```bash
+git clone https://github.com/PKTech-ai/projecont-sistema-de-OS.git && cd projecont-sistema-de-OS
+docker build -t ghcr.io/pktech-ai/sistema-os:latest .
+```
+
+Envia para o GHCR (com `docker login ghcr.io`) e usa o mesmo fluxo que o Contábil Pro (`docker service update` / Portainer **Pull and redeploy**), ou define o stack em `docker/stack-os.example.yml` (ajusta **rede Traefik**, host do Postgres e nome da imagem).
+
+Na primeira subida, cria **uma base PostgreSQL só para o OS** (ex.: `chamados_os`) e define `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL=https://tickets.pktech.ai`, `JWT_SECRET` e `WEBHOOK_SECRET` **iguais** aos da API do Contábil Pro.
+
 ## Requisitos de Infraestrutura
 
 - **Node.js**: Versão 20.x ou superior (recomendado 22.x)

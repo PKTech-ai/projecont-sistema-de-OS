@@ -1,0 +1,32 @@
+# Exemplo Docker Swarm + Traefik — copiar e ajustar segredos / rede
+# Deploy: docker stack deploy -c stack-os.yml sistema-os
+#
+# Antes: criar base Postgres dedicada ao OS e definir secrets ou env abaixo.
+
+version: "3.8"
+
+services:
+  os_web:
+    image: ghcr.io/pktech-ai/sistema-os:latest
+    environment:
+      DATABASE_URL: "postgresql://USUARIO:SENHA@postgres_postgres:5432/chamados_os"
+      AUTH_SECRET: "cole_openssl_rand_base64_32"
+      NEXTAUTH_URL: "https://tickets.pktech.ai"
+      JWT_SECRET: "MESMO_JWT_DA_API_CONTABIL_PRO"
+      WEBHOOK_SECRET: "MESMO_WEBHOOK_DA_API_CONTABIL_PRO"
+      NEXT_PUBLIC_CONTABIL_LOGIN_URL: "https://contabil-pro-v2.pktech.ai/login"
+      NODE_ENV: production
+    networks:
+      - traefik_public
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.os-web.rule=Host(`tickets.pktech.ai`)
+        - traefik.http.routers.os-web.entrypoints=web,websecure
+        - traefik.http.routers.os-web.tls.certresolver=letsencryptresolver
+        - traefik.http.services.os-web.loadbalancer.server.port=3000
+
+networks:
+  traefik_public:
+    external: true
