@@ -15,7 +15,7 @@ git clone https://github.com/PKTech-ai/projecont-sistema-de-OS.git && cd projeco
 docker build -t ghcr.io/pktech-ai/sistema-os:latest .
 ```
 
-Envia para o GHCR (com `docker login ghcr.io`) e usa o mesmo fluxo que o Contábil Pro (`docker service update` / Portainer **Pull and redeploy**), ou define o stack em `docker/stack-os.example.yml` (ajusta **rede Traefik**, host do Postgres e nome da imagem).
+Envia para o GHCR (com `docker login ghcr.io`) e usa o mesmo fluxo que o Contábil Pro (`docker service update` / Portainer **Pull and redeploy**), ou define o stack em **`stack-os.yml`** na raiz do repositório (ajusta **rede** `ProjecontNet`, host do Postgres e segredos).
 
 Na primeira subida, cria **uma base PostgreSQL só para o OS** (ex.: `chamados_os`) e define `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL=https://tickets.pktech.ai`, `JWT_SECRET` e `WEBHOOK_SECRET` **iguais** aos da API do Contábil Pro.
 

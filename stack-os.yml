@@ -1,8 +1,9 @@
-# Exemplo Docker Swarm + Traefik — copiar e ajustar segredos / rede
-# Deploy: docker stack deploy -c stack-os.yml sistema-os
+# Docker Swarm + Traefik (VPS Projecont)
+# Antes do deploy: substituir USUARIO, SENHA e confirmar host do Postgres (docker service ls | grep postgres).
+# Base dedicada ao OS (ex.: chamados_os), nunca a base do Contábil Pro.
+# JWT_SECRET e WEBHOOK_SECRET devem coincidir com a API do Contábil Pro.
 #
-# Antes: criar base Postgres dedicada ao OS e definir secrets ou env abaixo.
-# Rede overlay: na VPS Projecont usa-se `ProjecontNet` (docker network ls). Ajusta se for diferente.
+# Deploy: docker stack deploy -c stack-os.yml sistema-os
 
 version: "3.8"
 
