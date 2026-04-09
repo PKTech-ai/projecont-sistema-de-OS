@@ -62,6 +62,7 @@ export async function getDashboardSession(): Promise<Session | null> {
       role: usuario.role,
       setorId: usuario.setorId,
       setorTipo: usuario.setor.tipo,
+      primeiroAcesso: usuario.primeiroAcesso,
     },
   };
 }
