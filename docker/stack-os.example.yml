@@ -2,12 +2,13 @@
 # Deploy: docker stack deploy -c stack-os.yml sistema-os
 #
 # Antes: criar base Postgres dedicada ao OS e definir secrets ou env abaixo.
+# Rede overlay: na VPS Projecont usa-se `ProjecontNet` (docker network ls). Ajusta se for diferente.
 
 version: "3.8"
 
 services:
   os_web:
-    image: ghcr.io/pktech-ai/sistema-os:latest
+    image: sistema-os:local
     environment:
       DATABASE_URL: "postgresql://USUARIO:SENHA@postgres_postgres:5432/chamados_os"
       AUTH_SECRET: "cole_openssl_rand_base64_32"
@@ -17,7 +18,7 @@ services:
       NEXT_PUBLIC_CONTABIL_LOGIN_URL: "https://contabil-pro-v2.pktech.ai/login"
       NODE_ENV: production
     networks:
-      - traefik_public
+      - projecont_net
     deploy:
       replicas: 1
       labels:
@@ -28,5 +29,6 @@ services:
         - traefik.http.services.os-web.loadbalancer.server.port=3000
 
 networks:
-  traefik_public:
+  projecont_net:
     external: true
+    name: ProjecontNet
