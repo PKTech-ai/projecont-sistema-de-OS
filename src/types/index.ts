@@ -5,6 +5,7 @@ declare module "next-auth" {
     role: Role;
     setorId: string;
     setorTipo: TipoSetor;
+    primeiroAcesso: boolean;
   }
   interface Session {
     user: {
@@ -14,6 +15,7 @@ declare module "next-auth" {
       role: Role;
       setorId: string;
       setorTipo: TipoSetor;
+      primeiroAcesso: boolean;
     };
   }
 }
@@ -21,3 +23,4 @@ declare module "next-auth" {
 export type ActionResult<T = void> =
   | { success: true; data?: T }
   | { error: string };
+

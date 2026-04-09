@@ -6,6 +6,7 @@ type UserWithSetor = {
   role: Role;
   setorId: string;
   setorTipo: TipoSetor;
+  primeiroAcesso: boolean;
 };
 
 export const authConfig = {
@@ -24,6 +25,7 @@ export const authConfig = {
         token.role = u.role;
         token.setorId = u.setorId;
         token.setorTipo = u.setorTipo;
+        token.primeiroAcesso = u.primeiroAcesso;
       }
       return token;
     },
@@ -33,8 +35,29 @@ export const authConfig = {
         session.user.role = token.role as Role;
         session.user.setorId = token.setorId as string;
         session.user.setorTipo = token.setorTipo as TipoSetor;
+        session.user.primeiroAcesso = token.primeiroAcesso as boolean;
       }
       return session;
+    },
+    authorized({ auth, request }) {
+      const { pathname } = request.nextUrl;
+      const isLoggedIn = !!auth?.user;
+      const isPrimeiroAcesso = auth?.user?.primeiroAcesso === true;
+
+      // Rotas públicas
+      if (pathname.startsWith("/login") || pathname.startsWith("/alterar-senha")) {
+        return true;
+      }
+
+      // Não autenticado → login
+      if (!isLoggedIn) return false;
+
+      // Primeiro acesso → forçar troca de senha
+      if (isPrimeiroAcesso && !pathname.startsWith("/alterar-senha")) {
+        return Response.redirect(new URL("/alterar-senha", request.nextUrl));
+      }
+
+      return true;
     },
   },
   providers: [],

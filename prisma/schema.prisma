@@ -55,7 +55,9 @@ enum TipoMensagemChat {
 
 model Usuario {
   id        String   @id @default(cuid())
-  nome      String
+  nome      String   @default("")
+  /// Login principal (ex: karina.melo) — único quando preenchido
+  username  String?  @unique
   email     String   @unique
   senha     String
   role      Role     @default(ANALISTA)
@@ -63,6 +65,9 @@ model Usuario {
   setorId   String
   setor     Setor    @relation(fields: [setorId], references: [id])
   criadoEm  DateTime @default(now())
+
+  /** true = utilizador nunca alterou a senha; redirecionar para /alterar-senha */
+  primeiroAcesso Boolean @default(true)
 
   /** Sincronizado a partir do Contábil Pro (fonte de verdade) */
   origemContabilPro Boolean   @default(false)

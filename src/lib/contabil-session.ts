@@ -90,23 +90,35 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
 
   const senha = await getSyncPasswordHash();
   const role = mapContabilRoleToOs(payload.role);
+  const nome = payload.nome?.trim() || "Utilizador";
+  const now = new Date();
 
   try {
-    return await prisma.usuario.create({
-      data: {
+    // upsert: evita P2002 (corrida entre pedidos paralelos ou utilizador já criado por webhook)
+    return await prisma.usuario.upsert({
+      where: { id },
+      create: {
         id,
         email,
-        nome: payload.nome?.trim() || "Utilizador",
+        nome,
         senha,
         role,
         setorId: setor.id,
         origemContabilPro: true,
-        sincronizadoEm: new Date(),
+        sincronizadoEm: now,
+      },
+      update: {
+        email,
+        nome,
+        role,
+        setorId: setor.id,
+        origemContabilPro: true,
+        sincronizadoEm: now,
       },
       include: { setor: true },
     });
   } catch (e) {
-    console.error("[contabil-session] Falha ao criar utilizador a partir do JWT:", e);
+    console.error("[contabil-session] Falha ao criar/atualizar utilizador a partir do JWT:", e);
     return null;
   }
 }
