@@ -44,6 +44,7 @@ interface Empresa {
   nome: string;
   ativo: boolean;
   criadoEm: Date;
+  origemContabilPro?: boolean;
   cnpj: string | null;
   razaoSocial: string | null;
   nomeFantasia: string | null;
@@ -751,7 +752,19 @@ export function EmpresasClient({
               );
               return (
               <TableRow key={e.id} className={i % 2 === 1 ? "bg-ds-paper" : "bg-white"}>
-                <TableCell className="font-medium text-ds-charcoal">{e.nome}</TableCell>
+                <TableCell className="font-medium text-ds-charcoal">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{e.nome}</span>
+                    {e.origemContabilPro ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-ds-info/40 text-ds-info bg-ds-info/5 font-normal"
+                      >
+                        Contábil Pro
+                      </Badge>
+                    ) : null}
+                  </div>
+                </TableCell>
                 <TableCell className="text-ds-ash text-xs font-mono">
                   {e.cnpj ? formatarCnpjExibicao(e.cnpj) : "—"}
                 </TableCell>

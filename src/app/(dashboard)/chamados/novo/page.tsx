@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { FormNovoChamado } from "@/components/chamados/FormNovoChamado";
@@ -6,7 +6,7 @@ import { PageContextNav } from "@/components/layout/PageContextNav";
 import { DashboardMainScroll } from "@/components/layout/DashboardMainScroll";
 
 export default async function NovoChamadoPage() {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
   if (session.user.role === "TV") redirect("/");
   if (session.user.role === "SAC") redirect("/sac/novo");

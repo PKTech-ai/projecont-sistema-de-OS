@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -30,7 +30,7 @@ const atualizarCadastroUsuarioSchema = z.object({
 export async function criarUsuario(
   input: z.infer<typeof criarUsuarioSchema>
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const parsed = criarUsuarioSchema.safeParse(input);
@@ -72,7 +72,7 @@ export async function alterarStatusUsuario(
   usuarioId: string,
   ativo: boolean
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
@@ -110,7 +110,7 @@ export async function alterarRoleUsuario(
   role: Role,
   setorId: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
@@ -152,7 +152,7 @@ export async function alterarRoleUsuario(
 export async function atualizarCadastroUsuario(
   input: z.infer<typeof atualizarCadastroUsuarioSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const parsed = atualizarCadastroUsuarioSchema.safeParse(input);

@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { adicionarHorasUteis } from "@/lib/sla";
 import { PRAZO_HORAS_UTEIS_POR_PRIORIDADE } from "@/lib/prioridade";
@@ -42,7 +42,7 @@ const criarChamadoSchema = z.object({
 export async function criarChamado(
   input: z.infer<typeof criarChamadoSchema>
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role === "TV") return { error: "Não autorizado" };
 
@@ -139,7 +139,7 @@ const entregarChamadoSchema = z.object({
 export async function entregarChamado(
   input: z.infer<typeof entregarChamadoSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const parsed = entregarChamadoSchema.safeParse(input);
@@ -197,7 +197,7 @@ const mudarStatusSchema = z.object({
 export async function mudarStatus(
   input: z.infer<typeof mudarStatusSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const chamado = await prisma.chamado.findUnique({
@@ -321,7 +321,7 @@ const transferirSchema = z.object({
 export async function transferirChamado(
   input: z.infer<typeof transferirSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const podeGestorOuAdmin =
@@ -412,7 +412,7 @@ export async function cancelarChamado(
   chamadoId: string,
   justificativa?: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role === "TV") return { error: "Não autorizado" };
 
@@ -481,7 +481,7 @@ export async function adicionarComentario(
   conteudo: string,
   tipo: TipoMensagemChat = TipoMensagemChat.NORMAL
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role === "TV") return { error: "Não autorizado" };
 

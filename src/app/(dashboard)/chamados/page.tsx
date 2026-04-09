@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { getChamados } from "@/server/queries/chamados";
 import { ChamadoStatus } from "@/components/chamados/ChamadoStatus";
@@ -24,7 +24,7 @@ export default async function ChamadosPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   const params = await searchParams;

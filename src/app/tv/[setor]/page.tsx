@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StatusChamado, TipoSetor } from "@prisma/client";
@@ -24,7 +24,7 @@ export default async function TVPage({
 }: {
   params: Promise<{ setor: string }>;
 }) {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   const { setor: setorParam } = await params;

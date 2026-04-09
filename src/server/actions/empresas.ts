@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -80,7 +80,7 @@ function parseCsvRecords(text: string): { headers: string[]; rows: Record<string
 export async function criarEmpresa(
   input: z.infer<typeof empresaCreateSchema>
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role !== "SUPERADMIN" && session.user.role !== "GESTOR") {
     return { error: "Não autorizado" };
@@ -125,7 +125,7 @@ export async function criarEmpresa(
 export async function atualizarDadosEmpresa(
   input: z.infer<typeof empresaUpdateSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role !== "SUPERADMIN") {
     return { error: "Apenas o administrador pode editar o cadastro completo da empresa" };
@@ -168,7 +168,7 @@ export async function ativarDesativarEmpresa(
   id: string,
   ativo: boolean
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
 
   const empresa = await prisma.empresa.findUnique({
@@ -204,7 +204,7 @@ export async function ativarDesativarEmpresa(
 export async function upsertVinculo(
   input: z.infer<typeof vinculoSchema>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role !== "SUPERADMIN" && session.user.role !== "GESTOR") {
     return { error: "Não autorizado" };
@@ -245,7 +245,7 @@ export async function removerVinculo(
   empresaId: string,
   tipoServico: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role !== "SUPERADMIN" && session.user.role !== "GESTOR") {
     return { error: "Não autorizado" };
@@ -278,7 +278,7 @@ export type ResultadoImportDePara = {
 export async function importarDeParaVinculosCsv(
   csvText: string
 ): Promise<ActionResult<ResultadoImportDePara>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (session.user.role !== "SUPERADMIN" && session.user.role !== "GESTOR") {
     return { error: "Não autorizado" };

@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Usuario" ADD COLUMN IF NOT EXISTS "origemContabilPro" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Usuario" ADD COLUMN IF NOT EXISTS "sincronizadoEm" TIMESTAMP(3);
+
+-- AlterTable
+ALTER TABLE "Empresa" ADD COLUMN IF NOT EXISTS "origemContabilPro" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Empresa" ADD COLUMN IF NOT EXISTS "sincronizadoEm" TIMESTAMP(3);

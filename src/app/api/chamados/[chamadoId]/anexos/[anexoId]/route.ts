@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { usuarioPodeVerChamado } from "@/lib/chamado-access";
 import { readFile } from "fs/promises";
@@ -8,7 +8,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ chamadoId: string; anexoId: string }> }
 ) {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session || session.user.role === "TV") {
     return new Response("Unauthorized", { status: 401 });
   }

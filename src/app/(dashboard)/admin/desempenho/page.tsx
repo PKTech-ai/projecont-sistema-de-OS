@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PageContextNav } from "@/components/layout/PageContextNav";
@@ -9,7 +9,7 @@ import { DesempenhoClient } from "./DesempenhoClient";
 const DIAS = 30;
 
 export default async function DesempenhoPage() {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   if (session.user.role !== "GESTOR" && session.user.role !== "SUPERADMIN") {

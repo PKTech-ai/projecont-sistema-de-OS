@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -19,7 +19,7 @@ const projetoSchema = z.object({
 export async function criarProjeto(
   input: z.infer<typeof projetoSchema>
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (!podeAcessarProjetos(session.user.role)) {
     return { error: "Não autorizado" };
@@ -41,7 +41,7 @@ export async function editarProjeto(
   id: string,
   input: Partial<z.infer<typeof projetoSchema>>
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (!podeAcessarProjetos(session.user.role)) {
     return { error: "Não autorizado" };
@@ -63,7 +63,7 @@ export async function editarProjeto(
 }
 
 export async function ativarDesativarProjeto(id: string, ativo: boolean): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
   if (!podeAcessarProjetos(session.user.role)) {
     return { error: "Não autorizado" };

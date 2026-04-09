@@ -148,6 +148,18 @@ export default function LoginPage() {
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
+
+              {process.env.NEXT_PUBLIC_CONTABIL_LOGIN_URL ? (
+                <p className="text-center text-[12px] text-ds-ash mt-4 px-2">
+                  Sessão unida ao Contábil Pro:{" "}
+                  <a
+                    href={process.env.NEXT_PUBLIC_CONTABIL_LOGIN_URL}
+                    className="text-ds-info underline underline-offset-2 font-medium"
+                  >
+                    abrir login do Contábil Pro
+                  </a>
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 

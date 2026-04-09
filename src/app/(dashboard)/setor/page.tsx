@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { getChamadosSetor } from "@/server/queries/dashboard";
 import { getKPIs } from "@/server/queries/dashboard";
@@ -16,7 +16,7 @@ export default async function SetorPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   const sp = await searchParams;

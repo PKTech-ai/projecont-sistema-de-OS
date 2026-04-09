@@ -2,6 +2,10 @@
 
 Este documento descreve os passos necessários para realizar o deploy do Sistema de Chamados em um ambiente de produção (Self-hosted ou Cloud).
 
+**Produção PK Tech:** URL pública do OS: `https://tickets.pktech.ai`. Variáveis de exemplo: ver `.env.example` na raiz do projeto. Integração com o Contábil Pro: ver `contabil-pro-v2/server/INTEGRATION.md` no monorepo.
+
+**Importante:** `prisma migrate deploy` aplica-se à **base de dados do OS** (`DATABASE_URL` do OS). Não confundir com a base do Contábil Pro; **nunca** usar `migrate reset` em produção sem backup e plano explícito.
+
 ## Requisitos de Infraestrutura
 
 - **Node.js**: Versão 20.x ou superior (recomendado 22.x)

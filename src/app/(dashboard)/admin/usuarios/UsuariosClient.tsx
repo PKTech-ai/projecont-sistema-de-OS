@@ -37,6 +37,7 @@ interface Usuario {
   role: Role;
   ativo: boolean;
   criadoEm: Date;
+  origemContabilPro?: boolean;
   telefone: string | null;
   cargo: string | null;
   observacoes: string | null;
@@ -513,7 +514,19 @@ export function UsuariosClient({
           <TableBody>
             {usuarios.map((u, i) => (
               <TableRow key={u.id} className={i % 2 === 1 ? "bg-ds-paper" : "bg-white"}>
-                <TableCell className="font-medium text-ds-charcoal">{u.nome}</TableCell>
+                <TableCell className="font-medium text-ds-charcoal">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{u.nome}</span>
+                    {u.origemContabilPro ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-ds-info/40 text-ds-info bg-ds-info/5 font-normal"
+                      >
+                        Contábil Pro
+                      </Badge>
+                    ) : null}
+                  </div>
+                </TableCell>
                 <TableCell className="text-ds-ash text-sm">{u.email}</TableCell>
                 <TableCell className="text-ds-ash text-sm">{u.telefone ?? "—"}</TableCell>
                 <TableCell className="text-ds-ash text-sm max-w-[140px] truncate" title={u.cargo ?? ""}>

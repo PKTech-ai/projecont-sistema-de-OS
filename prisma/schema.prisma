@@ -64,6 +64,10 @@ model Usuario {
   setor     Setor    @relation(fields: [setorId], references: [id])
   criadoEm  DateTime @default(now())
 
+  /** Sincronizado a partir do Contábil Pro (fonte de verdade) */
+  origemContabilPro Boolean   @default(false)
+  sincronizadoEm    DateTime?
+
   telefone    String?
   cargo       String?
   observacoes String? @db.Text
@@ -92,6 +96,10 @@ model Empresa {
   nome      String
   ativo     Boolean          @default(true)
   criadoEm  DateTime         @default(now())
+
+  /** Sincronizado a partir do Contábil Pro (fonte de verdade) */
+  origemContabilPro Boolean   @default(false)
+  sincronizadoEm    DateTime?
 
   /** CNPJ apenas dígitos (14) — único quando informado */
   cnpj         String?  @unique

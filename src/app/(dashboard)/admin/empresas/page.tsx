@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { EmpresasClient } from "./EmpresasClient";
@@ -6,7 +6,7 @@ import { PageContextNav } from "@/components/layout/PageContextNav";
 import { DashboardMainScroll } from "@/components/layout/DashboardMainScroll";
 
 export default async function EmpresasAdminPage() {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   const isGestor = session.user.role === "GESTOR";

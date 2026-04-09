@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { User, Mail, Shield, Building } from "lucide-react";
@@ -6,7 +6,7 @@ import { PageContextNav } from "@/components/layout/PageContextNav";
 import { DashboardMainScroll } from "@/components/layout/DashboardMainScroll";
 
 export default async function PerfilPage() {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session) redirect("/login");
 
   const usuario = await prisma.usuario.findUnique({

@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { mkdir, writeFile, unlink } from "fs/promises";
@@ -19,7 +19,7 @@ export async function uploadAnexoChamado(
   chamadoId: string,
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session || session.user.role === "TV") return { error: "Não autorizado" };
 
   const file = formData.get("file");
@@ -57,7 +57,7 @@ export async function uploadAnexoChamado(
 }
 
 export async function removerAnexoChamado(anexoId: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await getDashboardSession();
   if (!session || session.user.role === "TV") return { error: "Não autorizado" };
 
   const anexo = await prisma.anexoChamado.findUnique({
