@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     where: { id: data.id },
     create: {
       id: data.id,
-      email: data.email?.trim().toLowerCase() ?? undefined,
+      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
       nome,
       senha,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       cargo: cargoBits || null,
     },
     update: {
-      email: data.email?.trim().toLowerCase() ?? undefined,
+      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
       nome,
       senha,
