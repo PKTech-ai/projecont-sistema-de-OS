@@ -12,8 +12,8 @@ function getJwtSecret() {
   return new TextEncoder().encode(s);
 }
 
-/**
- * Sessão do dashboard: NextAuth (credenciais locais) ou cookie `contabil_session` (Contábil Pro).
+/*
+ * Sessão do dashboard: NextAuth (credenciais locais) ou cookie `contabil_session` (Contábil Pro)
  */
 export async function getDashboardSession(): Promise<Session | null> {
   const session = await auth();

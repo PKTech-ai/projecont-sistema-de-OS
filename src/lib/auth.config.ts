@@ -42,20 +42,14 @@ export const authConfig = {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const isLoggedIn = !!auth?.user;
-      const isPrimeiroAcesso = auth?.user?.primeiroAcesso === true;
 
       // Rotas públicas
-      if (pathname.startsWith("/login") || pathname.startsWith("/alterar-senha")) {
+      if (pathname.startsWith("/login")) {
         return true;
       }
 
       // Não autenticado → login
       if (!isLoggedIn) return false;
-
-      // Primeiro acesso → forçar troca de senha
-      if (isPrimeiroAcesso && !pathname.startsWith("/alterar-senha")) {
-        return Response.redirect(new URL("/alterar-senha", request.nextUrl));
-      }
 
       return true;
     },
