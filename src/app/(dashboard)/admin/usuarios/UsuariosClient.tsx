@@ -27,6 +27,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { Plus, UserCheck, UserX, Pencil, UserCircle } from "lucide-react";
 import type { Role, TipoSetor } from "@prisma/client";
+import { ROLE_LABELS, ROLES_TODAS } from "@/lib/role-labels";
 import { ROLES_GESTOR_GERENCIA } from "@/lib/gestor-permissions";
 
 interface Setor { id: string; nome: string; tipo: TipoSetor }
@@ -44,7 +45,7 @@ interface Usuario {
   setor: { nome: string; tipo: TipoSetor };
 }
 
-const ROLES: Role[] = ["ANALISTA", "GESTOR", "SAC", "SUPERADMIN", "TV"];
+const ROLES = ROLES_TODAS;
 
 const ROLE_COLORS: Record<string, string> = {
   SUPERADMIN: "bg-ds-ink text-white border-0",
@@ -189,7 +190,7 @@ function NovoUsuarioDialog({
                 >
                   {(modo === "gestor" ? ROLES_GESTOR_GERENCIA : ROLES).map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {ROLE_LABELS[r]}
                     </option>
                   ))}
                 </select>
@@ -309,7 +310,7 @@ function EditarRoleDialog({
                 >
                   {(modo === "gestor" ? ROLES_GESTOR_GERENCIA : ROLES).map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {ROLE_LABELS[r]}
                     </option>
                   ))}
                 </select>
@@ -534,7 +535,7 @@ export function UsuariosClient({
                 </TableCell>
                 <TableCell>
                   <Badge className={`${ROLE_COLORS[u.role]} font-medium text-xs`}>
-                    {u.role}
+                    {ROLE_LABELS[u.role] ?? u.role}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-ds-charcoal text-sm">{u.setor.nome}</TableCell>

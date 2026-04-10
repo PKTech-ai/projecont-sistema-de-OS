@@ -6,8 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/types";
 
-function podeAcessarProjetos(role: string) {
-  return role === "SUPERADMIN" || role === "ANALISTA" || role === "GESTOR";
+function podeGerirProjetos(role: string, setorTipo: string) {
+  return role === "SUPERADMIN" || setorTipo === "IA";
 }
 
 const projetoSchema = z.object({
@@ -21,8 +21,8 @@ export async function criarProjeto(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
-  if (!podeAcessarProjetos(session.user.role)) {
-    return { error: "Não autorizado" };
+  if (!podeGerirProjetos(session.user.role, session.user.setorTipo)) {
+    return { error: "Apenas o setor de IA pode gerir projetos" };
   }
 
   if (session.user.role !== "SUPERADMIN" && input.setorId !== session.user.setorId) {
@@ -43,8 +43,8 @@ export async function editarProjeto(
 ): Promise<ActionResult> {
   const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
-  if (!podeAcessarProjetos(session.user.role)) {
-    return { error: "Não autorizado" };
+  if (!podeGerirProjetos(session.user.role, session.user.setorTipo)) {
+    return { error: "Apenas o setor de IA pode gerir projetos" };
   }
 
   const projeto = await prisma.projeto.findUnique({ where: { id } });
@@ -65,8 +65,8 @@ export async function editarProjeto(
 export async function ativarDesativarProjeto(id: string, ativo: boolean): Promise<ActionResult> {
   const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
-  if (!podeAcessarProjetos(session.user.role)) {
-    return { error: "Não autorizado" };
+  if (!podeGerirProjetos(session.user.role, session.user.setorTipo)) {
+    return { error: "Apenas o setor de IA pode gerir projetos" };
   }
 
   const projeto = await prisma.projeto.findUnique({ where: { id } });
