@@ -7,8 +7,7 @@ import { mapContabilRoleToOs } from "@/lib/contabil-role-map";
 import { getSyncPasswordHash } from "@/lib/contabil-sync-placeholder";
 
 function getJwtSecret() {
-  const s = process.env.JWT_SECRET;
-  if (!s) return null;
+  const s = process.env.JWT_SECRET || 'dev-shared-jwt-contabil-os';
   return new TextEncoder().encode(s);
 }
 
