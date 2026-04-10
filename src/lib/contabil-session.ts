@@ -50,7 +50,7 @@ export async function getDashboardSession(): Promise<Session | null> {
   });
 
   if (!usuario) {
-    usuario = await tryBootstrapUsuarioFromContabilJwt(payload);
+    usuario = (await tryBootstrapUsuarioFromContabilJwt(payload)) as typeof usuario;
   }
 
   if (!usuario || !usuario.ativo) return null;
@@ -119,7 +119,7 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
       where: { id },
       create: {
         id,
-        email: email ?? undefined,
+        email: email ?? `sso-${id}@pktech.ai`,
         username: username ?? undefined,
         nome,
         senha,
