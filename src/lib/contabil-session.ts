@@ -29,6 +29,7 @@ export async function getDashboardSession(): Promise<Session | null> {
   let payload: {
     sub?: string;
     email?: string;
+    username?: string;
     nome?: string;
     role?: string;
   };
@@ -40,7 +41,8 @@ export async function getDashboardSession(): Promise<Session | null> {
   }
 
   const id = payload.sub;
-  if (!id || !payload.email) return null;
+  // Requer pelo menos um identificador (email OU username)
+  if (!id || (!payload.email && !payload.username)) return null;
 
   let usuario = await prisma.usuario.findUnique({
     where: { id },
@@ -70,11 +72,14 @@ export async function getDashboardSession(): Promise<Session | null> {
 async function tryBootstrapUsuarioFromContabilJwt(payload: {
   sub?: string;
   email?: string;
+  username?: string;
   nome?: string;
   role?: string;
 }) {
   const id = payload.sub!;
-  const email = payload.email!;
+  const email = payload.email ?? null;
+  const username = payload.username ?? null;
+
   const setor = await prisma.setor.findFirst({
     where: { tipo: "CONTABIL" },
   });
@@ -83,10 +88,24 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
     return null;
   }
 
-  const emailTaken = await prisma.usuario.findUnique({ where: { email } });
-  if (emailTaken && emailTaken.id !== id) {
-    console.warn("[contabil-session] Email já usado por outro utilizador local; não bootstrap.", email);
-    return null;
+  // Verificar conflito por username
+  if (username) {
+    const byUsername = await prisma.usuario.findFirst({
+      where: { username, NOT: { id } },
+    });
+    if (byUsername) {
+      console.warn("[contabil-session] Username já usado por outro utilizador local; não bootstrap.", username);
+      return null;
+    }
+  }
+
+  // Verificar conflito por email — se tiver username, ainda conseguimos bootstrapar sem email
+  if (email) {
+    const byEmail = await prisma.usuario.findUnique({ where: { email } });
+    if (byEmail && byEmail.id !== id && !username) {
+      console.warn("[contabil-session] Email já usado por outro utilizador local; não bootstrap.", email);
+      return null;
+    }
   }
 
   const senha = await getSyncPasswordHash();
@@ -95,12 +114,13 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   const now = new Date();
 
   try {
-    // upsert: evita P2002 (corrida entre pedidos paralelos ou utilizador já criado por webhook)
+    // upsert por id: evita P2002 em pedidos paralelos
     return await prisma.usuario.upsert({
       where: { id },
       create: {
         id,
-        email,
+        email: email ?? undefined,
+        username: username ?? undefined,
         nome,
         senha,
         role,
@@ -109,7 +129,8 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
         sincronizadoEm: now,
       },
       update: {
-        email,
+        email: email ?? undefined,
+        username: username ?? undefined,
         nome,
         role,
         setorId: setor.id,
