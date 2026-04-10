@@ -76,33 +76,39 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   role?: string;
 }) {
   const id = payload.sub!;
-  const email = payload.email ?? null;
-  const username = payload.username ?? null;
+  const email = payload.email?.toLowerCase().trim() ?? null;
+  const username = payload.username?.toLowerCase().trim() ?? null;
 
   const setor = await prisma.setor.findFirst({
     where: { tipo: "CONTABIL" },
   });
   if (!setor) {
-    console.error("[contabil-session] Setor CONTABIL não encontrado — rode o seed.");
+    console.error("[contabil-session] Setor CONTABIL não encontrado.");
     return null;
   }
 
-  // Verificar conflito por username
-  if (username) {
-    const byUsername = await prisma.usuario.findFirst({
-      where: { username, NOT: { id } },
-    });
-    if (byUsername) {
-      console.warn("[contabil-session] Username já usado por outro utilizador local; não bootstrap.", username);
-      return null;
+  // RECONCILIAÇÃO: Se o usuário já existe com esse email/username mas ID diferente,
+  // precisamos atualizar o ID antigo para o novo (UUID do Contabil) via SQL bruto
+  // porque o Prisma não permite atualizar Primary Keys diretamente.
+  let existing = await prisma.usuario.findFirst({
+    where: {
+      OR: [
+        email ? { email } : {},
+        username ? { username } : {}
+      ].filter(o => Object.keys(o).length > 0)
     }
-  }
+  });
 
-  // Verificar conflito por email — se tiver username, ainda conseguimos bootstrapar sem email
-  if (email) {
-    const byEmail = await prisma.usuario.findUnique({ where: { email } });
-    if (byEmail && byEmail.id !== id && !username) {
-      console.warn("[contabil-session] Email já usado por outro utilizador local; não bootstrap.", email);
+  if (existing && existing.id !== id) {
+    console.log(`[contabil-session] Reconciliando ID para ${email || username}: ${existing.id} -> ${id}`);
+    try {
+      // Atualização atômica de PK via Raw SQL
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Usuario" SET id = $1 WHERE id = $2`,
+        id, existing.id
+      );
+    } catch (err) {
+      console.error("[contabil-session] Erro ao reconciliar ID via SQL:", err);
       return null;
     }
   }
@@ -113,7 +119,6 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   const now = new Date();
 
   try {
-    // upsert por id: evita P2002 em pedidos paralelos
     return await prisma.usuario.upsert({
       where: { id },
       create: {
@@ -126,6 +131,7 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
         setorId: setor.id,
         origemContabilPro: true,
         sincronizadoEm: now,
+        primeiroAcesso: false,
       },
       update: {
         email: email ?? undefined,
@@ -133,13 +139,12 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
         nome,
         role,
         setorId: setor.id,
-        origemContabilPro: true,
         sincronizadoEm: now,
       },
       include: { setor: true },
     });
   } catch (e) {
-    console.error("[contabil-session] Falha ao criar/atualizar utilizador a partir do JWT:", e);
+    console.error("[contabil-session] Falha no upsert SSO:", e);
     return null;
   }
 }

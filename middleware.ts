@@ -36,6 +36,16 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublicPath(pathname)) {
+    const token = request.cookies.get("contabil_session")?.value;
+    if (token) {
+      const secret = getJwtSecretBytes();
+      try {
+        await jwtVerify(token, secret);
+        return NextResponse.redirect(new URL("/", request.url));
+      } catch {
+        // token inválido, segue normal
+      }
+    }
     return NextResponse.next();
   }
 
