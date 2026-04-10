@@ -14,8 +14,7 @@ function hasNextAuthSessionCookie(request: NextRequest): boolean {
 }
 
 function getJwtSecretBytes() {
-  const s = process.env.JWT_SECRET;
-  if (!s) return null;
+  const s = process.env.JWT_SECRET || 'dev-shared-jwt-contabil-os';
   return new TextEncoder().encode(s);
 }
 
