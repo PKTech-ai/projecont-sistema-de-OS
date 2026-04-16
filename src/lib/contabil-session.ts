@@ -107,49 +107,79 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   if (existing && existing.id !== id) {
     console.log(`[contabil-session] Reconciliando ID para ${email || username}: ${existing.id} -> ${id}`);
     try {
-      // Atualização atômica de PK via Raw SQL
+      // Reconciliação atômica de PK
+      // NOTA: Se houver FKs sem CASCADE no banco, este comando falhará.
       await prisma.$executeRawUnsafe(
         `UPDATE "Usuario" SET id = $1 WHERE id = $2`,
         id, existing.id
       );
-    } catch (err) {
-      console.error("[contabil-session] Erro ao reconciliar ID via SQL:", err);
+      console.log(`[contabil-session] Reconciliação de ID concluída.`);
+    } catch (err: any) {
+      console.error("[contabil-session] Falha CRÍTICA ao reconciliar ID. Possível restrição de integridade (FK):", err.message);
+      // Se falhar a reconciliação, tentamos buscar pelo ID do Contabil para ver se ele já existe de outra forma
+      const targetUser = await prisma.usuario.findUnique({ where: { id } });
+      if (targetUser) {
+        console.log("[contabil-session] O ID do Contábil já existe no OS para outro usuário. Abortando bootstrap.");
+        return null;
+      }
       return null;
     }
   }
+
 
   const senha = await getSyncPasswordHash();
   const role = mapContabilRoleToOs(payload.role);
   const nome = payload.nome?.trim() || "Utilizador";
   const now = new Date();
 
+  // Verificação final antes de salvar para evitar conflitos em requisições paralelas
+  const checkUser = await prisma.usuario.findFirst({
+    where: {
+      OR: [
+        { id },
+        email ? { email } : {},
+        username ? { username } : {}
+      ].filter(o => Object.keys(o).length > 0)
+    }
+  });
+
   try {
-    return await prisma.usuario.upsert({
-      where: { id },
-      create: {
-        id,
-        email: email ?? `sso-${id}@pktech.ai`,
-        username: username ?? undefined,
-        nome,
-        senha,
-        role,
-        setorId: setor.id,
-        origemContabilPro: true,
-        sincronizadoEm: now,
-        primeiroAcesso: false,
-      },
-      update: {
-        email: email ?? undefined,
-        username: username ?? undefined,
-        nome,
-        role,
-        setorId: setor.id,
-        sincronizadoEm: now,
-      },
-      include: { setor: true },
-    });
-  } catch (e) {
-    console.error("[contabil-session] Falha no upsert SSO:", e);
+    if (checkUser) {
+      console.log(`[contabil-session] Usuário encontrado (ID: ${checkUser.id}), atualizando dados.`);
+      return await prisma.usuario.update({
+        where: { id: checkUser.id },
+        data: {
+          id, // Tenta sincronizar o ID caso o UPDATE anterior tenha sido pulado/falhado
+          email: email ?? undefined,
+          username: username ?? undefined,
+          nome,
+          role,
+          setorId: setor.id,
+          sincronizadoEm: now,
+        },
+        include: { setor: true },
+      });
+    } else {
+      console.log(`[contabil-session] Criando novo usuário SSO: ${email || username}`);
+      return await prisma.usuario.create({
+        data: {
+          id,
+          email: email ?? `sso-${id}@pktech.ai`,
+          username: username ?? undefined,
+          nome,
+          senha,
+          role,
+          setorId: setor.id,
+          origemContabilPro: true,
+          sincronizadoEm: now,
+          primeiroAcesso: false,
+        },
+        include: { setor: true },
+      });
+    }
+  } catch (e: any) {
+    console.error(`[contabil-session] Falha crítica no bootstrap SSO para ${email || username}:`, e.message);
     return null;
   }
 }
+
