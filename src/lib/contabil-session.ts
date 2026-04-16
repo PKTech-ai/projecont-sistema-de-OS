@@ -35,9 +35,12 @@ export async function getDashboardSession(): Promise<Session | null> {
   try {
     const verified = await jwtVerify(token, secret);
     payload = verified.payload as typeof payload;
-  } catch {
+    console.log('[contabil-session] Token validado para payload:', payload);
+  } catch (err) {
+    console.error('[contabil-session] Erro ao validar token:', err);
     return null;
   }
+
 
   const id = payload.sub;
   // Requer pelo menos um identificador (email OU username)
@@ -49,8 +52,10 @@ export async function getDashboardSession(): Promise<Session | null> {
   });
 
   if (!usuario) {
+    console.log('[contabil-session] Usuário não encontrado no DB local, tentando bootstrap para:', payload.email || payload.username);
     usuario = (await tryBootstrapUsuarioFromContabilJwt(payload)) as typeof usuario;
   }
+
 
   if (!usuario || !usuario.ativo) return null;
 
