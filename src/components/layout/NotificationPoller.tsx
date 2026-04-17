@@ -122,10 +122,14 @@ export function NotificationPoller() {
   return null;
 }
 
-// Converte chave VAPID base64url para Uint8Array (exigido pelo pushManager.subscribe)
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// Converte chave VAPID base64url para Uint8Array<ArrayBuffer> (exigido pelo pushManager.subscribe)
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    output[i] = raw.charCodeAt(i);
+  }
+  return output;
 }
