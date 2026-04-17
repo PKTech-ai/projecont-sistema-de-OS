@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       sincronizadoEm: new Date(),
       fiscalContabilId: data.fiscalResponsavelId ?? null,
       rhContabilId: data.rhResponsavelId ?? null,
-      societarioContabilId: data.societarioContabilId ?? null,
+      societarioContabilId: data.societarioResponsavelId ?? null,
     },
   });
 
