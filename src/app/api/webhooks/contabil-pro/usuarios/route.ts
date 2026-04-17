@@ -92,50 +92,66 @@ export async function POST(request: NextRequest) {
   const senha = await getSyncPasswordHash();
   const cargoBits = [data.team, data.subteam].filter(Boolean).join(" · ");
 
+  const email = data.email?.trim().toLowerCase();
+  const username = data.username?.trim().toLowerCase();
+
+  console.log(`[webhook usuario] Processando ${event} para ${email || username} (ID Contabil: ${data.id})`);
+
   // 1. Tentar encontrar usuário por ID ou por Email/Username para evitar conflitos de Unique Key
   let existingUsuario = await prisma.usuario.findUnique({ where: { id: data.id } });
   
-  if (!existingUsuario && data.email) {
-    existingUsuario = await prisma.usuario.findUnique({ where: { email: data.email.trim().toLowerCase() } });
+  if (!existingUsuario && email) {
+    existingUsuario = await prisma.usuario.findFirst({ 
+      where: { email: { equals: email, mode: 'insensitive' } } 
+    });
+    if (existingUsuario) console.log(`[webhook usuario] Encontrado por EMAIL: ${existingUsuario.id}`);
   }
   
-  if (!existingUsuario && data.username) {
-    existingUsuario = await prisma.usuario.findUnique({ where: { username: data.username.trim().toLowerCase() } });
+  if (!existingUsuario && username) {
+    existingUsuario = await prisma.usuario.findFirst({ 
+      where: { username: { equals: username, mode: 'insensitive' } } 
+    });
+    if (existingUsuario) console.log(`[webhook usuario] Encontrado por USERNAME: ${existingUsuario.id}`);
   }
 
   // Se o usuário existir com outro ID, usamos o ID que já está no banco para o upsert não falhar (merge)
   const targetId = existingUsuario ? existingUsuario.id : data.id;
 
-  await prisma.usuario.upsert({
-    where: { id: targetId },
-    create: {
-      // Usuário novo: inicializa com senha placeholder (será atualizada via password_sync)
-      id: targetId,
-      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || targetId}@pktech.internal`,
-      username: data.username?.trim().toLowerCase() ?? undefined,
-      nome,
-      senha,
-      role,
-      setorId: setor.id,
-      ativo,
-      origemContabilPro: true,
-      sincronizadoEm: new Date(),
-      cargo: cargoBits || null,
-    },
-    update: {
-      // Usuário EXISTENTE: nunca sobrescreve senha — o usuário pode já ter definido
-      // uma senha própria no OS. A senha só muda via evento password_sync.
-      // ativo undefined = preserva estado manual do OS (não altera)
-      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || targetId}@pktech.internal`,
-      username: data.username?.trim().toLowerCase() ?? undefined,
-      nome,
-      role,
-      ...(ativo !== undefined ? { ativo } : {}),
-      origemContabilPro: true,
-      sincronizadoEm: new Date(),
-      cargo: cargoBits || null,
-    },
-  });
+  if (existingUsuario && existingUsuario.id !== data.id) {
+    console.log(`[webhook usuario] RECONCILIANDO: Mapeando ID Contabil ${data.id} -> ID local ${existingUsuario.id}`);
+  }
+
+  try {
+    await prisma.usuario.upsert({
+      where: { id: targetId },
+      create: {
+        id: targetId,
+        email: email || `${username || targetId}@pktech.internal`,
+        username: username ?? undefined,
+        nome,
+        senha,
+        role,
+        setorId: setor.id,
+        ativo,
+        origemContabilPro: true,
+        sincronizadoEm: new Date(),
+        cargo: cargoBits || null,
+      },
+      update: {
+        email: email || `${username || targetId}@pktech.internal`,
+        username: username ?? undefined,
+        nome,
+        role,
+        ...(ativo !== undefined ? { ativo } : {}),
+        origemContabilPro: true,
+        sincronizadoEm: new Date(),
+        cargo: cargoBits || null,
+      },
+    });
+  } catch (err: any) {
+    console.error(`[webhook usuario] ERRO no upsert para ${targetId}:`, err.message);
+    throw err; // Repassa para o Next.js retornar 500
+  }
 
   return NextResponse.json({ ok: true });
 }
