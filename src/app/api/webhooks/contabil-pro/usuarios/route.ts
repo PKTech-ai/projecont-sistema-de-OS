@@ -92,12 +92,26 @@ export async function POST(request: NextRequest) {
   const senha = await getSyncPasswordHash();
   const cargoBits = [data.team, data.subteam].filter(Boolean).join(" · ");
 
+  // 1. Tentar encontrar usuário por ID ou por Email/Username para evitar conflitos de Unique Key
+  let existingUsuario = await prisma.usuario.findUnique({ where: { id: data.id } });
+  
+  if (!existingUsuario && data.email) {
+    existingUsuario = await prisma.usuario.findUnique({ where: { email: data.email.trim().toLowerCase() } });
+  }
+  
+  if (!existingUsuario && data.username) {
+    existingUsuario = await prisma.usuario.findUnique({ where: { username: data.username.trim().toLowerCase() } });
+  }
+
+  // Se o usuário existir com outro ID, usamos o ID que já está no banco para o upsert não falhar (merge)
+  const targetId = existingUsuario ? existingUsuario.id : data.id;
+
   await prisma.usuario.upsert({
-    where: { id: data.id },
+    where: { id: targetId },
     create: {
       // Usuário novo: inicializa com senha placeholder (será atualizada via password_sync)
-      id: data.id,
-      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
+      id: targetId,
+      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || targetId}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
       nome,
       senha,
@@ -112,7 +126,7 @@ export async function POST(request: NextRequest) {
       // Usuário EXISTENTE: nunca sobrescreve senha — o usuário pode já ter definido
       // uma senha própria no OS. A senha só muda via evento password_sync.
       // ativo undefined = preserva estado manual do OS (não altera)
-      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
+      email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || targetId}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
       nome,
       role,
