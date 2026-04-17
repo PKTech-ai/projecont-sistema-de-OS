@@ -77,6 +77,9 @@ model Usuario {
   cargo       String?
   observacoes String? @db.Text
 
+  /** Assinatura de push Web (JSON serializado) para notificações desktop mesmo com aba fechada */
+  pushSubscription String? @db.Text
+
   chamadosAbertos     Chamado[]       @relation("Solicitante")
   chamadosResponsavel Chamado[]       @relation("Responsavel")
   comentarios         Comentario[]
@@ -120,6 +123,13 @@ model Empresa {
   cidade       String?
   uf           String?
   observacoes  String? @db.Text
+
+  /** IDs originais dos responsáveis vindo do Contábil Pro.
+   *  Guardados para reconciliação posterior caso o usuário ainda não existisse no OS
+   *  quando o webhook de empresa chegou. */
+  fiscalContabilId      String?
+  rhContabilId          String?
+  societarioContabilId  String?
 
   vinculos  VinculoEmpresa[]
   chamados  Chamado[]

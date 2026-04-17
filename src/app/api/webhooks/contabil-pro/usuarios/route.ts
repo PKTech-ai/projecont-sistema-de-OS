@@ -56,8 +56,10 @@ export async function POST(request: NextRequest) {
       usuario = await prisma.usuario.findFirst({ where: { email: data.email } });
     }
     if (!usuario) {
-      // Utilizador ainda não existe no OS — ok, ignoramos silenciosamente
-      return NextResponse.json({ ok: true, skipped: true });
+      // Utilizador ainda não existe no OS — retorna 503 para forçar retry no remetente.
+      // Isso garante que password_sync chegando antes de usuario.upsert seja reaplicado.
+      console.warn(`[webhook usuario] password_sync: usuário ${data.id} não encontrado, retornando 503 para retry.`);
+      return NextResponse.json({ error: "usuario_not_found_retry" }, { status: 503 });
     }
 
     const hashed = await bcrypt.hash(data.newPassword, 10);
@@ -85,13 +87,15 @@ export async function POST(request: NextRequest) {
 
   const role = mapContabilRoleToOs(data.role);
   const nome = data.nome?.trim() || "Utilizador";
-  const ativo = data.ativo !== false;
+  // Se `ativo` não vier no payload, preserva o estado atual no OS (undefined = não alterar no update)
+  const ativo = data.ativo !== undefined ? data.ativo !== false : undefined;
   const senha = await getSyncPasswordHash();
   const cargoBits = [data.team, data.subteam].filter(Boolean).join(" · ");
 
   await prisma.usuario.upsert({
     where: { id: data.id },
     create: {
+      // Usuário novo: inicializa com senha placeholder (será atualizada via password_sync)
       id: data.id,
       email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
@@ -105,12 +109,14 @@ export async function POST(request: NextRequest) {
       cargo: cargoBits || null,
     },
     update: {
+      // Usuário EXISTENTE: nunca sobrescreve senha — o usuário pode já ter definido
+      // uma senha própria no OS. A senha só muda via evento password_sync.
+      // ativo undefined = preserva estado manual do OS (não altera)
       email: data.email?.trim().toLowerCase() || `${data.username?.trim().toLowerCase() || data.id}@pktech.internal`,
       username: data.username?.trim().toLowerCase() ?? undefined,
       nome,
-      senha,
       role,
-      ativo,
+      ...(ativo !== undefined ? { ativo } : {}),
       origemContabilPro: true,
       sincronizadoEm: new Date(),
       cargo: cargoBits || null,

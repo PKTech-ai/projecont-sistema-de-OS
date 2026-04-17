@@ -2,6 +2,7 @@
 
 import { getDashboardSession } from "@/lib/contabil-session";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/send-push";
 import { adicionarHorasUteis } from "@/lib/sla";
 import { PRAZO_HORAS_UTEIS_POR_PRIORIDADE } from "@/lib/prioridade";
 import { dentroDoPrazo } from "@/lib/pontualidade";
@@ -113,6 +114,11 @@ export async function criarChamado(
       chamadoId: chamado.id,
     },
   });
+  void sendPushToUser(responsavelId, {
+    title: "Novo chamado para você",
+    body: parsed.data.titulo,
+    url: `/chamados/${chamado.id}`,
+  });
 
   // LogPersona se abriu em nome de cliente
   if (parsed.data.emNomeDeCliente && parsed.data.empresaClienteId) {
@@ -181,6 +187,11 @@ export async function entregarChamado(
       usuarioId: chamado.solicitanteId,
       chamadoId: parsed.data.chamadoId,
     },
+  });
+  void sendPushToUser(chamado.solicitanteId, {
+    title: "Chamado entregue para validação",
+    body: chamado.titulo,
+    url: `/chamados/${parsed.data.chamadoId}`,
   });
 
   revalidatePath(`/chamados/${parsed.data.chamadoId}`);
@@ -297,6 +308,23 @@ export async function mudarStatus(
         chamadoId: input.chamadoId,
       })),
     });
+    const pushTitulos: Record<string, string> = {
+      ENTREGUE: "Chamado entregue para validação",
+      CONCLUIDO: "Chamado concluído",
+      REPROVADO: "Chamado reprovado — precisa de revisão",
+      TRANSFERIDO: "Chamado transferido para você",
+      CANCELADO: "Chamado cancelado",
+    };
+    for (const n of notificacoes) {
+      const title = pushTitulos[n.tipo];
+      if (title) {
+        void sendPushToUser(n.usuarioId, {
+          title,
+          body: chamado.titulo,
+          url: `/chamados/${input.chamadoId}`,
+        });
+      }
+    }
   }
 
   revalidatePath(`/chamados/${input.chamadoId}`);
@@ -401,6 +429,11 @@ export async function transferirChamado(
       usuarioId: input.novoResponsavelId,
       chamadoId: input.chamadoId,
     },
+  });
+  void sendPushToUser(input.novoResponsavelId, {
+    title: "Chamado transferido para você",
+    body: chamado.titulo,
+    url: `/chamados/${input.chamadoId}`,
   });
 
   revalidatePath(`/chamados/${input.chamadoId}`);

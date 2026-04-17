@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { OnboardingTour } from "@/components/ui/OnboardingTour";
+import { NotificationPoller } from "@/components/layout/NotificationPoller";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({
@@ -57,6 +58,7 @@ export default async function DashboardLayout({
         </main>
       </div>
       <OnboardingTour role={session.user.role} />
+      <NotificationPoller />
     </div>
   );
 }

@@ -17,6 +17,11 @@ services:
       JWT_SECRET: "MESMO_JWT_DA_API_CONTABIL_PRO"
       WEBHOOK_SECRET: "MESMO_WEBHOOK_DA_API_CONTABIL_PRO"
       NEXT_PUBLIC_CONTABIL_LOGIN_URL: "https://contabil-pro-v2.pktech.ai/login"
+      CRON_SECRET: "d03124fc672774c1b6a00300ff530fcdfaf8368bf7fc98c038857ecec75c9c0c"
+      VAPID_PUBLIC_KEY: "BORx3o9jmZHe1RDDMBUAbl0kG1tNYirlcoD_CYijPzOc0nqO2bG0tUP4jDSn0g2i-WteS2rtAJf4cvX-AmU69jM"
+      VAPID_PRIVATE_KEY: "DQgASfnqWihmNlCKPi-qKtCL-FfLMmX6KKpihEg4IZk"
+      VAPID_SUBJECT: "mailto:admin@pktech.ai"
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "BORx3o9jmZHe1RDDMBUAbl0kG1tNYirlcoD_CYijPzOc0nqO2bG0tUP4jDSn0g2i-WteS2rtAJf4cvX-AmU69jM"
       NODE_ENV: production
     networks:
       - projecont_net

@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
   // ou apenas atualizar o registro existente.
   const targetId = existingEmpresa ? existingEmpresa.id : data.id;
 
+  // Salva IDs originais do Contábil Pro para reconciliação posterior
+  // (caso o usuário responsável ainda não exista no OS quando este webhook chegar)
   const empresa = await prisma.empresa.upsert({
     where: { id: targetId },
     create: {
@@ -71,6 +73,9 @@ export async function POST(request: NextRequest) {
       ativo,
       origemContabilPro: true,
       sincronizadoEm: new Date(),
+      fiscalContabilId: data.fiscalResponsavelId ?? null,
+      rhContabilId: data.rhResponsavelId ?? null,
+      societarioContabilId: data.societarioResponsavelId ?? null,
     },
     update: {
       nome,
@@ -79,41 +84,36 @@ export async function POST(request: NextRequest) {
       ativo,
       origemContabilPro: true,
       sincronizadoEm: new Date(),
+      fiscalContabilId: data.fiscalResponsavelId ?? null,
+      rhContabilId: data.rhResponsavelId ?? null,
+      societarioContabilId: data.societarioContabilId ?? null,
     },
   });
 
-
-  // Novos os Vínculos de Responsáveis
+  // Vínculos de responsáveis — cria imediatamente se usuário já existe,
+  // senão ficam salvos nos campos *ContabilId para reconciliação posterior.
   const responsabilidades = [
     { id: data.fiscalResponsavelId, tipo: "FISCAL" },
     { id: data.rhResponsavelId, tipo: "DP" },
     { id: data.societarioResponsavelId, tipo: "SOCIETARIO" },
   ];
 
+  let vinculosPendentes = 0;
   for (const res of responsabilidades) {
-    if (res.id) {
-      // Verifica se o usuário existe no OS
-      const usuario = await prisma.usuario.findUnique({ where: { id: res.id } });
-      if (usuario) {
-        await prisma.vinculoEmpresa.upsert({
-          where: {
-            empresaId_tipoServico: {
-              empresaId: empresa.id,
-              tipoServico: res.tipo,
-            },
-          },
-          create: {
-            empresaId: empresa.id,
-            tipoServico: res.tipo,
-            responsavelId: usuario.id,
-          },
-          update: {
-            responsavelId: usuario.id,
-          },
-        });
-      }
+    if (!res.id) continue;
+    const usuario = await prisma.usuario.findUnique({ where: { id: res.id } });
+    if (usuario) {
+      await prisma.vinculoEmpresa.upsert({
+        where: { empresaId_tipoServico: { empresaId: empresa.id, tipoServico: res.tipo } },
+        create: { empresaId: empresa.id, tipoServico: res.tipo, responsavelId: usuario.id },
+        update: { responsavelId: usuario.id },
+      });
+    } else {
+      // Usuário não existe ainda — vínculo será criado pelo endpoint de reconciliação
+      vinculosPendentes++;
+      console.warn(`[webhook empresa] Responsável ${res.tipo} (id: ${res.id}) não encontrado no OS — pendente para reconciliação.`);
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, vinculosPendentes });
 }

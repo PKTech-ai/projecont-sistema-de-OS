@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export function assertWebhookSecret(request: Request): NextResponse | null {
-  const expected = process.env.WEBHOOK_SECRET || 'dev-webhook-secret-contabil-os';
+  const expected = process.env.WEBHOOK_SECRET;
   if (!expected) {
     console.error("[webhook] WEBHOOK_SECRET não configurado");
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });

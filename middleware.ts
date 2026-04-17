@@ -23,6 +23,7 @@ const publicPaths = [
   "/api/auth",
   "/api/webhooks",
   "/api/cron/reconcile",
+  "/api/cron/reconcile-vinculos",
   "/api/jobs",
 ];
 
