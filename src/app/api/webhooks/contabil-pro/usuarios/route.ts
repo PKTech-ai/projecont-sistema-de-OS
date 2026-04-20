@@ -121,36 +121,56 @@ export async function POST(request: NextRequest) {
     console.log(`[webhook usuario] RECONCILIANDO: Mapeando ID Contabil ${data.id} -> ID local ${existingUsuario.id}`);
   }
 
+  const upsertData = {
+    email: email || `${username || targetId}@pktech.internal`,
+    username: username ?? undefined,
+    nome,
+    role,
+    ...(ativo !== undefined ? { ativo } : {}),
+    origemContabilPro: true,
+    sincronizadoEm: new Date(),
+    cargo: cargoBits || null,
+  };
+
   try {
     await prisma.usuario.upsert({
       where: { id: targetId },
-      create: {
-        id: targetId,
-        email: email || `${username || targetId}@pktech.internal`,
-        username: username ?? undefined,
-        nome,
-        senha,
-        role,
-        setorId: setor.id,
-        ativo,
-        origemContabilPro: true,
-        sincronizadoEm: new Date(),
-        cargo: cargoBits || null,
-      },
-      update: {
-        email: email || `${username || targetId}@pktech.internal`,
-        username: username ?? undefined,
-        nome,
-        role,
-        ...(ativo !== undefined ? { ativo } : {}),
-        origemContabilPro: true,
-        sincronizadoEm: new Date(),
-        cargo: cargoBits || null,
-      },
+      create: { id: targetId, senha, setorId: setor.id, ...upsertData },
+      update: upsertData,
     });
   } catch (err: any) {
-    console.error(`[webhook usuario] ERRO no upsert para ${targetId}:`, err.message);
-    throw err; // Repassa para o Next.js retornar 500
+    // P2002: conflito de unique key (email ou username) — ocorre quando o lookup
+    // inicial não encontrou o registro existente (ex: diferença de formato de email).
+    // Fallback: localiza o registro conflitante e atualiza diretamente.
+    if (err.code === "P2002") {
+      console.warn(`[webhook usuario] P2002 em ${targetId} — tentando fallback UPDATE por email/username`);
+
+      let conflictUser = null;
+      if (email) {
+        conflictUser = await prisma.usuario.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
+      }
+      if (!conflictUser && username) {
+        conflictUser = await prisma.usuario.findFirst({
+          where: { username: { equals: username, mode: "insensitive" } },
+        });
+      }
+
+      if (conflictUser) {
+        console.log(`[webhook usuario] Fallback OK — atualizando ID local ${conflictUser.id}`);
+        await prisma.usuario.update({
+          where: { id: conflictUser.id },
+          data: upsertData,
+        });
+      } else {
+        console.error(`[webhook usuario] P2002 sem registro de fallback para ${targetId}:`, err.message);
+        throw err;
+      }
+    } else {
+      console.error(`[webhook usuario] ERRO no upsert para ${targetId}:`, err.message);
+      throw err;
+    }
   }
 
   return NextResponse.json({ ok: true });
