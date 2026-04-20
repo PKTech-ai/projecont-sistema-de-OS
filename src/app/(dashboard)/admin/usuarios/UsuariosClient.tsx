@@ -23,9 +23,10 @@ import {
   alterarStatusUsuario,
   alterarRoleUsuario,
   atualizarCadastroUsuario,
+  excluirUsuario,
 } from "@/server/actions/usuarios";
 import { formatDate } from "@/lib/utils";
-import { Plus, UserCheck, UserX, Pencil, UserCircle } from "lucide-react";
+import { Plus, UserCheck, UserX, Pencil, UserCircle, Trash2 } from "lucide-react";
 import type { Role, TipoSetor } from "@prisma/client";
 import { ROLE_LABELS, ROLES_TODAS } from "@/lib/role-labels";
 import { ROLES_GESTOR_GERENCIA } from "@/lib/gestor-permissions";
@@ -464,6 +465,78 @@ function ToggleStatusButton({
   );
 }
 
+// ─── Excluir Usuário ─────────────────────────────────────────────────────────
+
+function ExcluirUsuarioDialog({
+  usuario,
+  modo,
+  currentUserId,
+}: {
+  usuario: Usuario;
+  modo: "superadmin" | "gestor";
+  currentUserId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+
+  const disabledGestor =
+    modo === "gestor" && (usuario.role === "GESTOR" || usuario.role === "SUPERADMIN" || usuario.role === "TV");
+
+  const isSelf = usuario.id === currentUserId;
+
+  async function handleExclude() {
+    startTransition(async () => {
+      const r = await excluirUsuario(usuario.id);
+      if ("error" in r) {
+        setError(r.error);
+      } else {
+        setOpen(false);
+        setError("");
+      }
+    });
+  }
+
+  // Se o próprio superadmin quiser excluir a si mesmo, ou bloqueado pelo gestor
+  if (isSelf || disabledGestor) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-zinc-400 hover:text-red-600 hover:bg-red-50"
+          title="Excluir permanentemente"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      } />
+      <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
+        <DsDialogHeader
+          icon={Trash2}
+          title="Excluir Usuário"
+          description={`Você está prestes a excluir ${usuario.nome} do sistema.`}
+        />
+        <DsDialogBody>
+          <p className="text-sm text-ds-charcoal mb-4">
+            A deleção só é permitida se o usuário <strong>não possuir vínculos e chamados</strong> no sistema. Caso ele já tenha histórico, o sistema recusará a exclusão para preservar integridade. Se for o caso, use a opção de desativar (ícone de pessoa bloqueada).
+          </p>
+          {error ? <DsFormAlert>{error}</DsFormAlert> : null}
+        </DsDialogBody>
+        <DsDialogActions>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-ds-pebble" disabled={pending}>
+            Cancelar
+          </Button>
+          <Button type="button" disabled={pending} onClick={handleExclude} className="bg-red-600 hover:bg-red-700 text-white">
+            {pending ? "Excluindo..." : "Excluir Permanentemente"}
+          </Button>
+        </DsDialogActions>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main Client Component ────────────────────────────────────────────────────
 
 export function UsuariosClient({
@@ -561,6 +634,7 @@ export function UsuariosClient({
                       setorGestorId={setorGestorId}
                     />
                     <ToggleStatusButton usuario={u} modo={modo} currentUserId={currentUserId} />
+                    <ExcluirUsuarioDialog usuario={u} modo={modo} currentUserId={currentUserId} />
                   </div>
                 </TableCell>
               </TableRow>

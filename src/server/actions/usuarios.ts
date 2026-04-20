@@ -195,3 +195,43 @@ export async function atualizarCadastroUsuario(
 
   return { error: "Não autorizado" };
 }
+
+export async function excluirUsuario(usuarioId: string): Promise<ActionResult> {
+  const session = await getDashboardSession();
+  if (!session) return { error: "Não autorizado" };
+
+  const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+  if (!alvo) return { error: "Usuário não encontrado" };
+
+  if (
+    session.user.role === "SUPERADMIN" ||
+    (session.user.role === "GESTOR" && alvo.setorId === session.user.setorId)
+  ) {
+    if (
+      session.user.role === "GESTOR" &&
+      (alvo.role === "SUPERADMIN" || alvo.role === "GESTOR" || alvo.role === "TV")
+    ) {
+      return { error: "Não autorizado a excluir este perfil" };
+    }
+    
+    if (alvo.id === session.user.id) {
+      return { error: "Você não pode excluir a si mesmo" };
+    }
+
+    try {
+      await prisma.usuario.delete({ where: { id: usuarioId } });
+      revalidatePath("/admin/usuarios");
+      return { success: true };
+    } catch (e: any) {
+      if (e.code === "P2003") {
+        return {
+          error:
+            "Não é possível excluir pois o usuário possui histórico (chamados, comentários ou vínculos de empresas). Para manter a integridade, use a opção de 'Desativar' ao invés de excluir.",
+        };
+      }
+      return { error: "Erro ao tentar excluir" };
+    }
+  }
+
+  return { error: "Não autorizado" };
+}
