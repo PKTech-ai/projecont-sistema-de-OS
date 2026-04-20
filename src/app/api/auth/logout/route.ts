@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 export async function POST() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   
   // Clean up standard next-auth cookies if present
   cookieStore.delete("next-auth.session-token");
