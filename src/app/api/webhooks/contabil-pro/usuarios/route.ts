@@ -159,10 +159,24 @@ export async function POST(request: NextRequest) {
 
       if (conflictUser) {
         console.log(`[webhook usuario] Fallback OK — atualizando ID local ${conflictUser.id}`);
-        await prisma.usuario.update({
-          where: { id: conflictUser.id },
-          data: upsertData,
-        });
+        try {
+          await prisma.usuario.update({
+            where: { id: conflictUser.id },
+            data: upsertData,
+          });
+        } catch (err2: any) {
+          // Username também em conflito (outro registro já o tem) — retentar sem o username
+          if (err2.code === "P2002") {
+            console.warn(`[webhook usuario] P2002 no username também — retentando sem username para ${conflictUser.id}`);
+            const { username: _u, ...upsertDataSemUsername } = upsertData;
+            await prisma.usuario.update({
+              where: { id: conflictUser.id },
+              data: upsertDataSemUsername,
+            });
+          } else {
+            throw err2;
+          }
+        }
       } else {
         console.error(`[webhook usuario] P2002 sem registro de fallback para ${targetId}:`, err.message);
         throw err;
