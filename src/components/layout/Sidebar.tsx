@@ -95,6 +95,11 @@ interface SidebarProps {
 export function Sidebar({ role, setorTipo }: SidebarProps) {
   const pathname = usePathname();
 
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    await signOut({ callbackUrl: "/login" });
+  }
+
   function isActive(item: NavItem) {
     if (item.exact) return pathname === item.href;
     return pathname.startsWith(item.href);
@@ -142,7 +147,7 @@ export function Sidebar({ role, setorTipo }: SidebarProps) {
       {/* Footer */}
       <div className="px-3 py-4 border-t border-white/10 space-y-1" data-tour="sidebar-footer">
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-brand-gray-light hover:bg-white/5 hover:text-red-400 transition-colors group"
         >
           <LogOut className="h-4 w-4 shrink-0 group-hover:text-red-400" />

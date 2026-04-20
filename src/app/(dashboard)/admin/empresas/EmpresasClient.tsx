@@ -487,6 +487,7 @@ function GerenciarVinculosDialog({
     modo === "gestor" && setorTipoGestor ? setorTipoGestor : "CONTABIL"
   );
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [searchUser, setSearchUser] = useState("");
   const [error, setError] = useState("");
 
   const tipoEfetivo = modo === "gestor" && setorTipoGestor ? setorTipoGestor : selectedTipo;
@@ -494,6 +495,10 @@ function GerenciarVinculosDialog({
   // Filtra usuários do setor selecionado (excluindo TV)
   const usuariosFiltrados = usuarios.filter(
     (u) => u.setor.tipo === tipoEfetivo
+  );
+
+  const usuariosDoSetorPesquisados = usuariosFiltrados.filter(u =>
+    u.nome.toLowerCase().includes(searchUser.toLowerCase())
   );
 
   // Tipos já vinculados nesta empresa
@@ -618,18 +623,35 @@ function GerenciarVinculosDialog({
                   Serviço: <strong>{SETORES_SERVICO.find((s) => s.tipo === setorTipoGestor)?.label}</strong>
                 </p>
               )}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-medium text-ds-ash uppercase tracking-wider">Responsável</Label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full h-10 rounded-md border border-ds-pebble bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ds-info/40 text-ds-charcoal"
-                >
-                  <option value="">Selecione...</option>
-                  {usuariosFiltrados.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nome}</option>
+                <Input
+                  placeholder="Pesquisar..."
+                  value={searchUser}
+                  onChange={(e) => setSearchUser(e.target.value)}
+                  className="h-9 text-sm"
+                />
+                <div className="h-32 overflow-y-auto border border-ds-pebble rounded-md bg-white">
+                  {usuariosDoSetorPesquisados.map((u) => (
+                    <div
+                      key={u.id}
+                      onClick={() => setSelectedUserId(u.id)}
+                      className={cn(
+                        "px-3 py-2 text-sm cursor-pointer hover:bg-ds-paper transition-colors",
+                        selectedUserId === u.id
+                          ? "bg-ds-info-bg text-ds-info font-medium border-l-[3px] border-l-ds-info"
+                          : "text-ds-charcoal"
+                      )}
+                    >
+                      {u.nome}
+                    </div>
                   ))}
-                </select>
+                  {usuariosDoSetorPesquisados.length === 0 && (
+                    <div className="p-3 text-xs text-ds-ash text-center italic">
+                      Nenhum resultado
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             {usuariosFiltrados.length === 0 && (
@@ -696,18 +718,37 @@ export function EmpresasClient({
   modo: "superadmin" | "gestor";
   setorTipoGestor?: TipoSetor;
 }) {
+  const [searchGeral, setSearchGeral] = useState("");
+
+  const empresasFiltradas = empresas.filter((e) => {
+    if (!searchGeral) return true;
+    const lower = searchGeral.toLowerCase();
+    const cleanCnpj = searchGeral.replace(/\D/g, "");
+    return (
+      (e.nome && e.nome.toLowerCase().includes(lower)) ||
+      (e.razaoSocial && e.razaoSocial.toLowerCase().includes(lower)) ||
+      (e.cnpj && cleanCnpj && e.cnpj.includes(cleanCnpj))
+    );
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-ds-ink">
             {modo === "gestor" ? "Empresas — seu setor" : "Empresas e Vínculos"}
           </h2>
           <p className="text-ds-ash text-sm mt-1">
-            {empresas.length} empresas · {empresas.reduce((acc, e) => acc + e.vinculos.length, 0)} vínculos
+            {empresasFiltradas.length} empresas encontradas
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Input
+            placeholder="Buscar por nome ou CNPJ..."
+            value={searchGeral}
+            onChange={(e) => setSearchGeral(e.target.value)}
+            className="w-64 h-9 bg-white shadow-sm"
+          />
           <ImportarDeParaDialog />
           <NovaEmpresaDialog />
         </div>
@@ -743,8 +784,15 @@ export function EmpresasClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {empresas.map((e, i) => {
-              const podeToggleGestor = Boolean(
+            {empresasFiltradas.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-ds-ash">
+                  Nenhuma empresa encontrada para essa busca.
+                </TableCell>
+              </TableRow>
+            ) : (
+              empresasFiltradas.map((e, i) => {
+                const podeToggleGestor = Boolean(
                 modo === "superadmin" ||
                   (modo === "gestor" &&
                     setorTipoGestor &&
