@@ -864,7 +864,8 @@ export function EmpresasClient({
                 </TableCell>
               </TableRow>
             );
-            })}
+          })
+        )}
           </TableBody>
         </Table>
       </div>
