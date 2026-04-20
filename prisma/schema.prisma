@@ -130,6 +130,7 @@ model Empresa {
   fiscalContabilId      String?
   rhContabilId          String?
   societarioContabilId  String?
+  contabilContabilId    String?
 
   vinculos  VinculoEmpresa[]
   chamados  Chamado[]

@@ -10,6 +10,7 @@ type EmpresaPayload = {
   fiscalResponsavelId?: string | null;
   rhResponsavelId?: string | null;
   societarioResponsavelId?: string | null;
+  contabilResponsavelId?: string | null;
   ativo?: boolean;
 };
 
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       fiscalContabilId: data.fiscalResponsavelId ?? null,
       rhContabilId: data.rhResponsavelId ?? null,
       societarioContabilId: data.societarioResponsavelId ?? null,
+      contabilContabilId: data.contabilResponsavelId ?? null,
     },
     update: {
       nome,
@@ -87,6 +89,7 @@ export async function POST(request: NextRequest) {
       fiscalContabilId: data.fiscalResponsavelId ?? null,
       rhContabilId: data.rhResponsavelId ?? null,
       societarioContabilId: data.societarioResponsavelId ?? null,
+      contabilContabilId: data.contabilResponsavelId ?? null,
     },
   });
 
@@ -96,6 +99,7 @@ export async function POST(request: NextRequest) {
     { id: data.fiscalResponsavelId, tipo: "FISCAL" },
     { id: data.rhResponsavelId, tipo: "DP" },
     { id: data.societarioResponsavelId, tipo: "SOCIETARIO" },
+    { id: data.contabilResponsavelId, tipo: "CONTABIL" },
   ];
 
   let vinculosPendentes = 0;

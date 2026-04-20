@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         { fiscalContabilId: { not: null } },
         { rhContabilId: { not: null } },
         { societarioContabilId: { not: null } },
+        { contabilContabilId: { not: null } },
       ],
     },
     select: {
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       fiscalContabilId: true,
       rhContabilId: true,
       societarioContabilId: true,
+      contabilContabilId: true,
     },
   });
 
@@ -44,6 +46,7 @@ export async function POST(req: NextRequest) {
     { campo: "fiscalContabilId" as const, tipo: "FISCAL" },
     { campo: "rhContabilId" as const, tipo: "DP" },
     { campo: "societarioContabilId" as const, tipo: "SOCIETARIO" },
+    { campo: "contabilContabilId" as const, tipo: "CONTABIL" },
   ];
 
   let criados = 0;
