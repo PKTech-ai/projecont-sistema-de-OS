@@ -19,7 +19,8 @@ export default async function EmpresasAdminPage() {
       include: {
         vinculos: {
           // Gestor: só carrega vínculos do próprio tipo de serviço (isolamento por setor).
-          where: isGestor ? { tipoServico: session.user.setorTipo } : undefined,
+          // IMPORTANTE: só filtra se setorTipo estiver definido; caso contrário Prisma faria IS NULL e retornaria vazio.
+          where: (isGestor && session.user.setorTipo) ? { tipoServico: session.user.setorTipo } : undefined,
           include: {
             responsavel: { select: { id: true, nome: true, setor: { select: { tipo: true, nome: true } } } },
           },
