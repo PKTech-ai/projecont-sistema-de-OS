@@ -134,7 +134,7 @@ export function AcoesCard({
 
   const operacoesBody = (
     <>
-        {chamado.status === "NAO_INICIADO" && isResponsavel && (
+        {chamado.status === "NAO_INICIADO" && (
           <Button
             disabled={loading}
             className="bg-ds-info hover:bg-ds-ink-dark text-white w-full"
@@ -145,7 +145,7 @@ export function AcoesCard({
           </Button>
         )}
 
-        {chamado.status === "EM_ANDAMENTO" && isResponsavel && showPanel !== "entregar" && (
+        {chamado.status === "EM_ANDAMENTO" && showPanel !== "entregar" && (
           <Button
             disabled={loading}
             className="bg-ds-info hover:bg-ds-ink text-white w-full"
@@ -196,7 +196,7 @@ export function AcoesCard({
           </div>
         )}
 
-        {chamado.status === "AGUARDANDO_VALIDACAO" && isSolicitante && (
+        {chamado.status === "AGUARDANDO_VALIDACAO" && (
           <Button
             disabled={loading}
             className="bg-green-600 hover:bg-green-700 text-white w-full"
@@ -207,7 +207,7 @@ export function AcoesCard({
           </Button>
         )}
 
-        {chamado.status === "AGUARDANDO_VALIDACAO" && isSolicitante && showPanel !== "justificativa" && (
+        {chamado.status === "AGUARDANDO_VALIDACAO" && showPanel !== "justificativa" && (
           <Button
             disabled={loading}
             variant="outline"
@@ -331,8 +331,7 @@ export function AcoesCard({
           </div>
         )}
 
-        {isSolicitante &&
-          chamado.status !== "CONCLUIDO" &&
+        {chamado.status !== "CONCLUIDO" &&
           chamado.status !== "CANCELADO" &&
           showPanel !== "cancelar" && (
             <Button

@@ -35,29 +35,12 @@ export default async function ChamadoDetalhePage({
   const chamado = await getChamadoById(id);
   if (!chamado) notFound();
 
-  const gestorDoDestino =
-    session.user.role === "GESTOR" && chamado.setorDestinoId === session.user.setorId;
-
-  const canAct =
-    session.user.id === chamado.responsavelId ||
-    session.user.id === chamado.solicitanteId ||
-    session.user.role === "SUPERADMIN" ||
-    gestorDoDestino;
-
-  const podeTransferirGestorOuAdmin =
-    (session.user.role === "GESTOR" || session.user.role === "SUPERADMIN") &&
+  const canAct = session.user.role !== "TV";
+  const podeTransferir =
+    canAct &&
     Boolean(chamado.setorDestinoId) &&
     chamado.status !== "CONCLUIDO" &&
     chamado.status !== "CANCELADO";
-
-  const podeTransferirAnalista =
-    session.user.role === "ANALISTA" &&
-    session.user.id === chamado.responsavelId &&
-    Boolean(chamado.setorDestinoId) &&
-    chamado.status !== "CONCLUIDO" &&
-    chamado.status !== "CANCELADO";
-
-  const podeTransferir = podeTransferirGestorOuAdmin || podeTransferirAnalista;
 
   const candidatosTransferencia = podeTransferir
     ? await prisma.usuario.findMany({

@@ -156,9 +156,7 @@ export async function entregarChamado(
   if (chamado.status !== StatusChamado.EM_ANDAMENTO) {
     return { error: "Apenas chamados EM_ANDAMENTO podem ser entregues para validação" };
   }
-  if (chamado.responsavelId !== session.user.id && session.user.role !== "SUPERADMIN") {
-    return { error: "Apenas o responsável pode entregar o chamado" };
-  }
+  if (session.user.role === "TV") return { error: "Não autorizado" };
 
   const agora = new Date();
   await prisma.chamado.update({
@@ -227,28 +225,11 @@ export async function mudarStatus(
   const userId = session.user.id;
   const role = session.user.role;
 
-  // Verificação de quem pode fazer cada transição
+  // Verificação de quem pode fazer cada transição - Removidas restrições conforme pedido (sem restrições)
   if (input.novoStatus === StatusChamado.CANCELADO) {
-    if (chamado.solicitanteId !== userId) {
-      return { error: "Apenas quem abriu o chamado pode cancelá-lo" };
-    }
-  } else if (input.novoStatus === StatusChamado.EM_ANDAMENTO && chamado.status === StatusChamado.NAO_INICIADO) {
-    if (chamado.responsavelId !== userId && role !== "SUPERADMIN") {
-      return { error: "Apenas o responsável pode iniciar o atendimento" };
-    }
-  } else if (input.novoStatus === StatusChamado.AGUARDANDO_VALIDACAO) {
-    if (chamado.responsavelId !== userId && role !== "SUPERADMIN") {
-      return { error: "Apenas o responsável pode enviar para validação" };
-    }
-  } else if (input.novoStatus === StatusChamado.CONCLUIDO) {
-    if (chamado.solicitanteId !== userId) {
-      return { error: "Apenas o solicitante pode concluir o chamado" };
-    }
+    // Qualquer usuário autenticado pode cancelar
   } else if (input.novoStatus === StatusChamado.EM_ANDAMENTO && chamado.status === StatusChamado.AGUARDANDO_VALIDACAO) {
-    // Reprovação — somente o solicitante (PRD / auditoria técnica)
-    if (chamado.solicitanteId !== userId) {
-      return { error: "Apenas o solicitante pode reprovar o chamado" };
-    }
+    // Reprovação
     if (!input.justificativa?.trim()) {
       return { error: "Justificativa é obrigatória ao reprovar um chamado" };
     }
@@ -351,15 +332,7 @@ export async function transferirChamado(
 ): Promise<ActionResult> {
   const session = await getDashboardSession();
   if (!session) return { error: "Não autorizado" };
-
-  const podeGestorOuAdmin =
-    session.user.role === "GESTOR" || session.user.role === "SUPERADMIN";
-  const podeAnalistaResponsavel =
-    session.user.role === "ANALISTA";
-
-  if (!podeGestorOuAdmin && !podeAnalistaResponsavel) {
-    return { error: "Não autorizado" };
-  }
+  if (session.user.role === "TV") return { error: "Não autorizado" };
 
   const chamado = await prisma.chamado.findUnique({
     where: { id: input.chamadoId },
@@ -372,26 +345,6 @@ export async function transferirChamado(
     chamado.status === StatusChamado.CANCELADO
   ) {
     return { error: "Não é possível transferir chamados concluídos ou cancelados." };
-  }
-
-  // GESTOR / SUPERADMIN: podem transferir em qualquer status ativo (ex.: EM_ANDAMENTO, AGUARDANDO_VALIDACAO).
-
-  if (podeAnalistaResponsavel) {
-    if (chamado.responsavelId !== session.user.id) {
-      return { error: "Apenas o responsável atual pode transferir este chamado." };
-    }
-    const statusPermite = [
-      StatusChamado.NAO_INICIADO,
-      StatusChamado.EM_ANDAMENTO,
-      StatusChamado.AGUARDANDO_VALIDACAO,
-    ].includes(chamado.status);
-    if (!statusPermite) {
-      return { error: "Transferência não disponível neste status." };
-    }
-  }
-
-  if (session.user.role === "GESTOR" && chamado.setorDestinoId !== session.user.setorId) {
-    return { error: "GESTOR só pode transferir chamados destinados ao seu setor" };
   }
 
   if (!chamado.setorDestinoId) {
@@ -451,9 +404,6 @@ export async function cancelarChamado(
 
   const chamado = await prisma.chamado.findUnique({ where: { id: chamadoId } });
   if (!chamado) return { error: "Chamado não encontrado" };
-  if (chamado.solicitanteId !== session.user.id) {
-    return { error: "Apenas quem abriu o chamado pode cancelá-lo" };
-  }
   if (chamado.status === StatusChamado.CANCELADO) return { error: "Chamado já cancelado" };
   if (chamado.status === StatusChamado.CONCLUIDO) return { error: "Chamado já concluído" };
 
