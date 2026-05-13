@@ -48,9 +48,7 @@ export async function criarChamado(
   if (session.user.role === "TV") return { error: "Não autorizado" };
 
   if (input.emNomeDeCliente) {
-    if (session.user.role !== "SAC" && session.user.role !== "SUPERADMIN") {
-      return { error: "Chamados em nome de cliente só podem ser abertos pela área de atendimento (SAC)." };
-    }
+    // Qualquer role pode abrir em nome de cliente agora
   }
 
   const parsed = criarChamadoSchema.safeParse(input);
