@@ -98,20 +98,34 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   const existing = await prisma.usuario.findFirst({
     where: {
       OR: [
-        email ? { email } : {},
-        username ? { username } : {},
-      ].filter(o => Object.keys(o).length > 0),
+        email ? { email: { equals: email, mode: 'insensitive' } } : {},
+        username ? { username: { equals: username, mode: 'insensitive' } } : {},
+      ].filter((o) => Object.keys(o).length > 0),
       NOT: { id },
     },
   });
 
   if (existing) {
-    console.log(`[contabil-session] Reconciliando ID para ${email || username}: ${existing.id} -> ${id}`);
+    console.log(
+      `[contabil-session] Reconciliando ID para ${email || username}: ${
+        existing.id
+      } -> ${id}`
+    );
     try {
-      await prisma.$executeRawUnsafe(`UPDATE "Usuario" SET id = $1 WHERE id = $2`, id, existing.id);
+      // Usar query bruta para trocar a PK (Prisma não permite mudar ID)
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Usuario" SET id = $1 WHERE id = $2`,
+        id,
+        existing.id
+      );
       console.log(`[contabil-session] Reconciliação de ID concluída.`);
     } catch (err: any) {
-      console.error("[contabil-session] Falha ao reconciliar ID (FK sem CASCADE?):", err.message);
+      console.error(
+        "[contabil-session] Falha ao reconciliar ID (FK sem CASCADE?):",
+        err.message
+      );
+      // Se falhar a troca de ID, tentamos seguir com o ID antigo se possível, 
+      // ou retornamos null para evitar erro de constraint no upsert abaixo.
       return null;
     }
   }
@@ -120,35 +134,56 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   const role = mapContabilRoleToOs(payload.role);
   const nome = payload.nome?.trim() || "Utilizador";
 
+  const upsertData = {
+    email: email ?? `sso-${id}@pktech.ai`,
+    username: username ?? undefined,
+    nome,
+    role,
+    origemContabilPro: true,
+    sincronizadoEm: new Date(),
+    primeiroAcesso: false,
+  };
+
   // upsert atômico — evita race condition quando múltiplas requisições paralelas
-  // chegam para o mesmo usuário novo (ex: múltiplas abas abrindo ao mesmo tempo).
   try {
     return await prisma.usuario.upsert({
       where: { id },
       create: {
         id,
-        email: email ?? `sso-${id}@pktech.ai`,
-        username: username ?? undefined,
-        nome,
         senha,
-        role,
         setorId: setor.id,
-        origemContabilPro: true,
-        sincronizadoEm: new Date(),
-        primeiroAcesso: false,
+        ...upsertData,
       },
       update: {
-        // Não sobrescreve setorId — o usuário pode ter sido movido para outro setor no OS
-        email: email ?? undefined,
-        username: username ?? undefined,
-        nome,
-        role,
-        sincronizadoEm: new Date(),
+        ...upsertData,
+        // Não sobrescreve setorId
       },
       include: { setor: true },
     });
   } catch (e: any) {
-    console.error(`[contabil-session] Falha no bootstrap SSO para ${email || username}:`, e.message);
+    if (e.code === "P2002") {
+      console.warn(
+        `[contabil-session] P2002 no upsert para ${id} — tentando fallback update por email`
+      );
+      // Fallback: se o upsert falhou por email duplicado mesmo após o check acima 
+      // (race condition ou inconsistência), tentamos atualizar o registro existente.
+      if (email) {
+        const conflict = await prisma.usuario.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
+        if (conflict) {
+          return await prisma.usuario.update({
+            where: { id: conflict.id },
+            data: upsertData,
+            include: { setor: true },
+          });
+        }
+      }
+    }
+    console.error(
+      `[contabil-session] Falha no bootstrap SSO para ${email || username}:`,
+      e.message
+    );
     return null;
   }
 }
