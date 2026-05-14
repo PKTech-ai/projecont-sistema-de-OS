@@ -98,8 +98,10 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
   const existing = await prisma.usuario.findFirst({
     where: {
       OR: [
-        email ? { email: { equals: email, mode: 'insensitive' } } : {},
-        username ? { username: { equals: username, mode: 'insensitive' } } : {},
+        email ? { email: { equals: email, mode: 'insensitive' as const } } : {},
+        username
+          ? { username: { equals: username, mode: 'insensitive' as const } }
+          : {},
       ].filter((o) => Object.keys(o).length > 0),
       NOT: { id },
     },
@@ -169,7 +171,7 @@ async function tryBootstrapUsuarioFromContabilJwt(payload: {
       // (race condition ou inconsistência), tentamos atualizar o registro existente.
       if (email) {
         const conflict = await prisma.usuario.findFirst({
-          where: { email: { equals: email, mode: "insensitive" } },
+          where: { email: { equals: email, mode: "insensitive" as const } },
         });
         if (conflict) {
           return await prisma.usuario.update({
