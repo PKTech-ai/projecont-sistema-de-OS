@@ -22,6 +22,10 @@ const criarUsuarioSchema = z.object({
 
 const atualizarCadastroUsuarioSchema = z.object({
   usuarioId: z.string(),
+  nome: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  role: z.nativeEnum(Role).optional(),
+  setorId: z.string().optional(),
   telefone: z.string().optional().nullable(),
   cargo: z.string().optional().nullable(),
   observacoes: z.string().optional().nullable(),
@@ -158,42 +162,54 @@ export async function atualizarCadastroUsuario(
   const parsed = atualizarCadastroUsuarioSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
 
-  const alvo = await prisma.usuario.findUnique({ where: { id: parsed.data.usuarioId } });
+  const { usuarioId, nome, email, role, setorId, telefone, cargo, observacoes } = parsed.data;
+
+  const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
   if (!alvo) return { error: "Usuário não encontrado" };
 
-  if (session.user.role === "SUPERADMIN") {
-    await prisma.usuario.update({
-      where: { id: parsed.data.usuarioId },
-      data: {
-        telefone: parsed.data.telefone?.trim() || null,
-        cargo: parsed.data.cargo?.trim() || null,
-        observacoes: parsed.data.observacoes?.trim() || null,
-      },
-    });
-    revalidatePath("/admin/usuarios");
-    return { success: true };
-  }
-
-  if (session.user.role === "GESTOR") {
-    if (alvo.setorId !== session.user.setorId) {
-      return { error: "Só é possível editar usuários do seu setor" };
-    }
-    if (alvo.role === "GESTOR" || alvo.role === "SUPERADMIN") {
+  // Validações de Permissões
+  if (session.user.role !== "SUPERADMIN") {
+    if (session.user.role === "GESTOR") {
+      if (alvo.setorId !== session.user.setorId) {
+        return { error: "Só é possível editar usuários do seu setor" };
+      }
+      if (alvo.role === "GESTOR" || alvo.role === "SUPERADMIN") {
+        return { error: "Não autorizado a alterar gestores ou administradores" };
+      }
+      if (setorId && setorId !== session.user.setorId) {
+        return { error: "Gestor não pode mudar o setor de um funcionário" };
+      }
+      if (role && (role === "SUPERADMIN" || role === "TV")) {
+        return { error: "Gestor não pode atribuir essas permissões" };
+      }
+    } else {
       return { error: "Não autorizado" };
     }
-    await prisma.usuario.update({
-      where: { id: parsed.data.usuarioId },
-      data: {
-        telefone: parsed.data.telefone?.trim() || null,
-        cargo: parsed.data.cargo?.trim() || null,
-        observacoes: parsed.data.observacoes?.trim() || null,
-      },
-    });
-    revalidatePath("/admin/usuarios");
-    return { success: true };
   }
 
-  return { error: "Não autorizado" };
+  // Validar unicidade do email se alterado
+  if (email && email.toLowerCase().trim() !== alvo.email.toLowerCase().trim()) {
+    const existing = await prisma.usuario.findFirst({
+      where: { email: { equals: email.toLowerCase().trim(), mode: "insensitive" } }
+    });
+    if (existing) return { error: "E-mail já está cadastrado para outro usuário" };
+  }
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: {
+      ...(nome && { nome: nome.trim() }),
+      ...(email && { email: email.toLowerCase().trim() }),
+      ...(role && { role }),
+      ...(setorId && { setorId }),
+      telefone: telefone !== undefined ? (telefone?.trim() || null) : undefined,
+      cargo: cargo !== undefined ? (cargo?.trim() || null) : undefined,
+      observacoes: observacoes !== undefined ? (observacoes?.trim() || null) : undefined,
+    },
+  });
+
+  revalidatePath("/admin/usuarios");
+  return { success: true };
 }
 
 export async function excluirUsuario(usuarioId: string): Promise<ActionResult> {

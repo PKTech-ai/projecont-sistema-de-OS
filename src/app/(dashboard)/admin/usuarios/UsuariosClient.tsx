@@ -244,9 +244,9 @@ function NovoUsuarioDialog({
   );
 }
 
-// ─── Dialog Editar Role/Setor ─────────────────────────────────────────────────
+// ─── Dialog Editar Usuário (Unificado) ─────────────────────────────────────────
 
-function EditarRoleDialog({
+function EditarUsuarioDialog({
   usuario,
   setores,
   modo,
@@ -263,51 +263,107 @@ function EditarRoleDialog({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const fd = new FormData(e.currentTarget);
+
     startTransition(async () => {
-      const result = await alterarRoleUsuario(
-        usuario.id,
-        String(data.get("role")) as Role,
-        modo === "gestor" ? String(setorGestorId) : String(data.get("setorId"))
-      );
-      if ("error" in result) {
-        setError(result.error);
+      const payload = {
+        usuarioId: usuario.id,
+        nome: modo === "superadmin" ? String(fd.get("nome")) : undefined,
+        email: modo === "superadmin" ? String(fd.get("email")) : undefined,
+        role: String(fd.get("role")) as Role,
+        setorId: modo === "superadmin" ? String(fd.get("setorId")) : String(setorGestorId),
+        telefone: String(fd.get("telefone") || "").trim() || null,
+        cargo: String(fd.get("cargo") || "").trim() || null,
+        observacoes: String(fd.get("observacoes") || "").trim() || null,
+      };
+
+      const r = await atualizarCadastroUsuario(payload);
+      if ("error" in r) {
+        setError(r.error);
       } else {
         setOpen(false);
+        setError("");
       }
     });
   }
 
-  if (modo === "gestor" && usuario.role === "GESTOR") {
-    return null;
-  }
+  const disabledGestor = modo === "gestor" && usuario.role === "GESTOR";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-ds-ash hover:text-ds-ink hover:bg-ds-paper">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-ds-ash hover:text-ds-ink" title="Editar dados">
           <Pencil className="h-4 w-4" />
         </Button>
       } />
-      <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
+      <DialogContent className={cn(dsDialogContentClass, "max-w-lg")} showCloseButton>
         <DsDialogHeader
-          icon={Pencil}
-          title="Perfil e setor"
-          description={
-            <>
-              Ajuste o perfil de acesso de <strong className="text-ds-charcoal">{usuario.nome}</strong>.
-            </>
-          }
+          icon={UserCircle}
+          title="Editar Usuário"
+          description={`Altere as informações de ${usuario.nome}.`}
         />
         <form onSubmit={handleSubmit}>
-          <DsDialogBody>
-            <div className="space-y-4">
+          <DsDialogBody className="max-h-[min(520px,80vh)] overflow-y-auto">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="nome" className="ds-label">Nome Completo</Label>
+                <Input
+                  id="nome"
+                  name="nome"
+                  defaultValue={usuario.nome}
+                  disabled={modo !== "superadmin"}
+                  required
+                  className={cn(
+                    "rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10",
+                    modo !== "superadmin" && "bg-ds-linen/50 cursor-not-allowed"
+                  )}
+                />
+              </div>
               <div className="space-y-1.5">
-                <Label className="ds-label">Perfil</Label>
+                <Label htmlFor="email" className="ds-label">E-mail Corporativo</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  defaultValue={usuario.email}
+                  disabled={modo !== "superadmin"}
+                  required
+                  className={cn(
+                    "rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10",
+                    modo !== "superadmin" && "bg-ds-linen/50 cursor-not-allowed"
+                  )}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="telefone" className="ds-label">Telefone / Ramal</Label>
+                <Input
+                  id="telefone"
+                  name="telefone"
+                  defaultValue={usuario.telefone ?? ""}
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="cargo" className="ds-label">Cargo / Função</Label>
+                <Input
+                  id="cargo"
+                  name="cargo"
+                  defaultValue={usuario.cargo ?? ""}
+                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
+                />
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="role" className="ds-label">Perfil / Acesso *</Label>
                 <select
+                  id="role"
                   name="role"
                   defaultValue={usuario.role}
-                  className="h-10 w-full rounded-[5px] border border-ds-stone bg-white px-3 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-ink/10"
+                  disabled={disabledGestor}
+                  className={cn(
+                    "h-10 w-full rounded-[5px] border border-ds-stone bg-white px-3 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-ink/10",
+                    disabledGestor && "bg-ds-linen/50 cursor-not-allowed"
+                  )}
                 >
                   {(modo === "gestor" ? ROLES_GESTOR_GERENCIA : ROLES).map((r) => (
                     <option key={r} value={r}>
@@ -316,97 +372,31 @@ function EditarRoleDialog({
                   ))}
                 </select>
               </div>
-              {modo === "superadmin" && (
-                <div className="space-y-1.5">
-                  <Label className="ds-label">Setor</Label>
-                  <select
-                    name="setorId"
-                    defaultValue={setores.find((s) => s.nome === usuario.setor.nome)?.id}
-                    className="h-10 w-full rounded-[5px] border border-ds-stone bg-white px-3 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-ink/10"
-                  >
-                    {setores.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-            {error ? <DsFormAlert>{error}</DsFormAlert> : null}
-          </DsDialogBody>
-          <DsDialogActions>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-ds-pebble">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={pending} className="bg-ds-ink text-ds-paper hover:bg-ds-ink-dark">
-              {pending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DsDialogActions>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
-function EditarCadastroDialog({ usuario }: { usuario: Usuario }) {
-  const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    startTransition(async () => {
-      const r = await atualizarCadastroUsuario({
-        usuarioId: usuario.id,
-        telefone: String(fd.get("telefone") || "").trim() || null,
-        cargo: String(fd.get("cargo") || "").trim() || null,
-        observacoes: String(fd.get("observacoes") || "").trim() || null,
-      });
-      if ("error" in r) setError(r.error);
-      else {
-        setOpen(false);
-        setError("");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-ds-ash hover:text-ds-ink" title="Dados cadastrais">
-          <UserCircle className="h-4 w-4" />
-        </Button>
-      } />
-      <DialogContent className={cn(dsDialogContentClass, "max-w-md")} showCloseButton>
-        <DsDialogHeader
-          icon={UserCircle}
-          title="Dados cadastrais"
-          description={`Telefone, cargo e observações internas de ${usuario.nome}.`}
-        />
-        <form onSubmit={handleSubmit}>
-          <DsDialogBody>
-            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="ds-label">Telefone / ramal</Label>
-                <Input
-                  name="telefone"
-                  defaultValue={usuario.telefone ?? ""}
-                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
-                />
+                <Label htmlFor="setorId" className="ds-label">Setor *</Label>
+                <select
+                  id="setorId"
+                  name="setorId"
+                  defaultValue={setores.find((s) => s.nome === usuario.setor.nome)?.id}
+                  disabled={modo !== "superadmin"}
+                  className={cn(
+                    "h-10 w-full rounded-[5px] border border-ds-stone bg-white px-3 text-sm text-ds-charcoal focus:outline-none focus:ring-2 focus:ring-ds-ink/10",
+                    modo !== "superadmin" && "bg-ds-linen/50 cursor-not-allowed"
+                  )}
+                >
+                  {setores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="ds-label">Cargo / função</Label>
-                <Input
-                  name="cargo"
-                  defaultValue={usuario.cargo ?? ""}
-                  className="rounded-[5px] border-ds-stone focus-visible:ring-ds-ink/10"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="ds-label">Observações internas</Label>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="observacoes" className="ds-label">Observações internas</Label>
                 <Textarea
+                  id="observacoes"
                   name="observacoes"
                   rows={3}
                   defaultValue={usuario.observacoes ?? ""}
@@ -429,6 +419,7 @@ function EditarCadastroDialog({ usuario }: { usuario: Usuario }) {
     </Dialog>
   );
 }
+
 
 // ─── Toggle Status ────────────────────────────────────────────────────────────
 
@@ -626,8 +617,7 @@ export function UsuariosClient({
                 <TableCell className="text-ds-ash text-sm">{formatDate(u.criadoEm)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <EditarCadastroDialog usuario={u} />
-                    <EditarRoleDialog
+                    <EditarUsuarioDialog
                       usuario={u}
                       setores={setores}
                       modo={modo}

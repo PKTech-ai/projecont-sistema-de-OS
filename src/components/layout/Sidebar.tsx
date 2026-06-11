@@ -80,6 +80,12 @@ const adminItems: NavItem[] = [
     roles: ["SUPERADMIN", "GESTOR"],
   },
   {
+    label: "Setores",
+    href: "/admin/setores",
+    icon: FolderKanban,
+    roles: ["SUPERADMIN"],
+  },
+  {
     label: "Projetos do setor",
     href: "/admin/projetos",
     icon: FolderOpen,

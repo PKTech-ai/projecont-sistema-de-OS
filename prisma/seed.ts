@@ -54,6 +54,7 @@ async function main() {
   await prisma.usuario.createMany({
     data: [
       { nome: "Administrador",   email: "admin@projecont.com.br",        senha: await hash("admin123"),     role: "SUPERADMIN", setorId: S["IA"].id       },
+      { nome: "Admin PK Tech",   email: "admin@pktech.ai",               senha: await hash("Admin123"),     role: "SUPERADMIN", setorId: S["IA"].id       },
       { nome: "Fernanda Rocha",  email: "gestor.contabil@projecont.com.br", senha, role: "GESTOR",    setorId: S["CONTABIL"].id },
       { nome: "Ana Santos",      email: "ana.santos@projecont.com.br",    senha, role: "ANALISTA",   setorId: S["CONTABIL"].id },
       { nome: "Pedro Alves",     email: "pedro.alves@projecont.com.br",   senha, role: "ANALISTA",   setorId: S["FISCAL"].id   },
